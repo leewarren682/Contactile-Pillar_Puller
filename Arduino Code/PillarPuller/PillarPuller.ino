@@ -25,6 +25,10 @@ int closeButtonState = 0;
 int limitSwitchState = 0;
 int speed = 5000;
 
+// Variables to be plotted (force and platform position)
+float mass;
+float platformTravel;
+
 
 // CHANGE THESE PIN NUMBERS TO MATCH THE SCHEMATIC
 #define CS_PIN 10    //CS chip select
@@ -43,8 +47,6 @@ Adafruit_NAU7802 nau;
 void setup() {
   Serial.begin(115200);  //init serial port and set baudrate
 
-  // delay(500);
-
   //set pins
   pinMode(DIR_PIN, OUTPUT);
   digitalWrite(DIR_PIN, LOW);  //direction: LOW or HIGH
@@ -60,15 +62,13 @@ void setup() {
   pinMode(SCK_PIN, OUTPUT);
   digitalWrite(SCK_PIN, LOW);
 
-
-
-
   // THESE MAY NEED TO CHANGE
   //set driver config
   tmc.begin();
   tmc.toff(4);         //off time
   tmc.blank_time(24);  //blank time
   // tmc.en_pwm_mode(1); //enable extremely quiet stepping (stealthchop)
+  tmc.COOLCONF()
   tmc.microsteps(16);     //16 microsteps
   tmc.rms_current(2000);  //400mA RMS
   tmc.ihold(0); //set the idle current value to 0.
@@ -84,7 +84,7 @@ void setup() {
   if (!nau.begin()) {
     Serial.println("Failed to find NAU7802");
   }
-  Serial.println("Found NAU7802");
+  // Serial.println("Found NAU7802");
 
   nau.setLDO(NAU7802_3V3);
   nau.setRate(NAU7802_RATE_10SPS);
@@ -100,14 +100,18 @@ void setup() {
     Serial.println("Failed to calibrate internal offset, retrying!");
     delay(1000);
   }
-  Serial.println("Calibrated internal offset");
+  // Serial.println("Calibrated internal offset");
 
   // Serial.println("What do you want from the Pillar Puller? Please input 1-3 in the serial monitor.");
   // Serial.println("1. I would like to test until failure. (Will run the test until failure detection)");
   // Serial.println("2. I would like to manually test");
   // Serial.println("3. I would like to test to a certain force value");
 
-
+  // Serial.print("Time");
+  // Serial.print(", ");
+  // Serial.print("Force");
+  // Serial.print(", ");
+  // Serial.println("Platform Position");
 
 }
 
@@ -142,13 +146,15 @@ void loop() {
   float platformTravel = (float(stepper.currentPosition()) / 3200.00) * 2.00;
   // Serial.print(Ms);
   // Serial.print(" ");
-  // Serial.print(" Force: ");
+  // Serial.print("Force:");
   // Serial.print(mass);
-  // Serial.print(" N ");
-  // Serial.print("Platform Position: "), Serial.print(platformTravel);
+  // Serial.print(",");
+  // Serial.print("Platform Position:"), Serial.println(platformTravel);
   // Serial.println(" mm");
 
+
 // --- Print the values in serial format. So that it can be transformed into csv file.
+
 
   Serial.print(Ms);
   Serial.print(",");
