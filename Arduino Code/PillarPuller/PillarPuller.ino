@@ -132,7 +132,7 @@ void loop() {
     if (tmc.ola()) { Serial.println(F("Open Load A")); }
     if (tmc.olb()) { Serial.println(F("Open Load B")); }
   }
-  Serial.print("reading from the nau");
+  // Serial.print("reading from the nau");
 
   // If a button has been pushed, set the rms current to 2000. If a button is not being pressed. Set the rms current to 0.
   
@@ -140,13 +140,23 @@ void loop() {
   int32_t val = nau.read();
   float mass = (val - 3000.0) / 600.0;
   float platformTravel = (float(stepper.currentPosition()) / 3200.00) * 2.00;
+  // Serial.print(Ms);
+  // Serial.print(" ");
+  // Serial.print(" Force: ");
+  // Serial.print(mass);
+  // Serial.print(" N ");
+  // Serial.print("Platform Position: "), Serial.print(platformTravel);
+  // Serial.println(" mm");
+
+// --- Print the values in serial format. So that it can be transformed into csv file.
+
   Serial.print(Ms);
-  Serial.print(" ");
-  Serial.print(" Force: ");
+  Serial.print(",");
   Serial.print(mass);
-  Serial.print(" N ");
-  Serial.print("Platform Position: "), Serial.print(platformTravel);
-  Serial.println(" mm");
+  Serial.print(",");
+  Serial.println(platformTravel);
+
+
 
 
   openButtonState = digitalRead(OPEN_BUTTON_PIN);
