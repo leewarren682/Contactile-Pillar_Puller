@@ -1,7 +1,3 @@
-
-
-
-
 // CODE TO BE USED WITH THE TMC5160 MOTOR DRIVER AND THE PCB
 
 // #define EN_PIN    7 //enable ENABLE IS GROUNDED ON THE PCB - ACTIVE LOW
@@ -9,8 +5,6 @@
 #include <TMCStepper.h>
 #include <AccelStepper.h>
 #include <Adafruit_NAU7802.h>
-
-
 
 // CHANGE THESE PIN NUMBERS TO MATCH THE SCHEMATIC
 #define DIR_PIN 20   //direction
@@ -38,7 +32,6 @@ float platformTravel;
 
 #define R_SENSE 0.2f  //TMC5160: 0.075 Ohm
 
-// TMC5160Stepper tmc = TMC5160Stepper(CS_PIN, R_SENSE); //use hardware SPI
 TMC5160Stepper tmc = TMC5160Stepper(CS_PIN, R_SENSE, MOSI_PIN, MISO_PIN, SCK_PIN);  //use software SPI
 AccelStepper stepper = AccelStepper(stepper.DRIVER, STEP_PIN, DIR_PIN);
 Adafruit_NAU7802 nau;
@@ -108,30 +101,9 @@ void setup() {
     Serial.println("Failed to calibrate internal offset, retrying!");
     delay(1000);
   }
-  // Serial.println("Calibrated internal offset");
-
-  // Serial.println("What do you want from the Pillar Puller? Please input 1-3 in the serial monitor.");
-  // Serial.println("1. I would like to test until failure. (Will run the test until failure detection)");
-  // Serial.println("2. I would like to manually test");
-  // Serial.println("3. I would like to test to a certain force value");
-
-  // Serial.print("Time");
-  // Serial.print(", ");
-  // Serial.print("Force");
-  // Serial.print(", ");
-  // Serial.println("Platform Position");
-
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
-  // Case chosen based on user input
-  // if (tmc.stst()){
-  //   Serial.println("TMC STANDSTILL VALUE IS: " + tmc.stst());
-  //   tmc.IHOLD_IRUN(0x00000000);
-  // }
-
   static uint32_t last_time = 0;
   uint32_t ms = millis();
   uint32_t Ms = micros();
@@ -159,6 +131,8 @@ void loop() {
   Serial.print(mass);
   Serial.print(",");
   Serial.println(platformTravel);
+
+
 
 
 
