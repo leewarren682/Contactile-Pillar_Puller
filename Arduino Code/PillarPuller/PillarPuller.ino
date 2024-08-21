@@ -76,7 +76,7 @@ void setup() {
 
   nau.setLDO(NAU7802_3V3);
   nau.setRate(NAU7802_RATE_320SPS); //320 is fastest, 10 is slowest
-  nau.setGain(NAU7802_GAIN_16);
+  nau.setGain(NAU7802_GAIN_32);
 
   // Take 10 readings to flush out readings
   for (uint8_t i = 0; i < 10; i++) {
