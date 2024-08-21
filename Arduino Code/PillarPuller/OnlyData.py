@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import csv
 import time as tim
+import tkinter as tk
 
 # Constants
 SERIAL_PORT = 'COM10'
@@ -46,13 +47,41 @@ def save_data():
     
     return filename
 
-try:
-    while(True):
-        process()
-except KeyboardInterrupt:
-    filename = save_data()
-    print(f"Data save to {filename}")
+
+# Old code when GUI was not implemented.
+# try:
+#     while(True):
+#         process()
+# except KeyboardInterrupt:
+#     filename = save_data()
+#     print(f"Data save to {filename}")
 
 
-# Function to plot the most recent data file and display it.
-# Give information about where the breaking point was.
+# -------------------- GUI IMPLEMENTATION -----------------------------------
+# Create the main application window
+root = tk.Tk()
+
+# Set the title of the main window
+root.title("Pillar Puller Control Panel")
+
+# Set the size of the main window (optional)
+root.geometry("400x300")
+
+# Add a simple label widget to the main window
+label = tk.Label(root, text="Please select a profile")
+label.pack(pady=20) # Use widget's .pack() method to add to the window
+
+# Add a clickable button to the main window
+button = tk.Button(
+    text="profile1",
+    width=25,
+    height=5,
+    bg="purple",
+    fg="white",
+    command=process
+)
+
+button.pack()
+
+# Run the application's main event loop
+root.mainloop()

@@ -13,13 +13,17 @@ root.geometry("400x300")
 label = tk.Label(root, text="Please select a profile")
 label.pack(pady=20) # Use widget's .pack() method to add to the window
 
+def hello_world():
+    print("Hello world!")
+
 # Add a clickable button to the main window
 button = tk.Button(
     text="profile1",
     width=25,
     height=5,
     bg="purple",
-    fg="white"
+    fg="white",
+    command=hello_world
 )
 
 button.pack()
