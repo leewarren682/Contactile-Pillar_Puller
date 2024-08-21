@@ -72,11 +72,10 @@ void setup() {
   if (!nau.begin()) {
     Serial.println("Failed to find NAU7802");
   }
-  // Serial.println("Found NAU7802");
 
   nau.setLDO(NAU7802_3V3);
   nau.setRate(NAU7802_RATE_320SPS); //320 is fastest, 10 is slowest
-  nau.setGain(NAU7802_GAIN_32);
+  nau.setGain(NAU7802_GAIN_32); // Gain at 32. Don't change will mess with force readings.
 
   // Take 10 readings to flush out readings
   for (uint8_t i = 0; i < 10; i++) {
@@ -134,9 +133,7 @@ void loop() {
   } else {
     stop();
   }
-  // digitalWrite(2, HIGH);
   stepper.runSpeed();
-  // digitalWrite(2, LOW);
 }
 
 void stop() {
@@ -153,29 +150,24 @@ void close() {
   tmc.rms_current(1000);  //1000mA RMS
   stepper.setSpeed(-speed);
 }
-/* 
-void calibration() {
 
-  static uint32_t last_time=0;
-  uint32_t ms = millis();
+// void calibration() {
 
-  if((ms-last_time) > 1000) //run every 1s
-  {
-    last_time = ms;
-    int32_t calVal = nau.read();
-    float mass = (calVal-3000)/600;
+//   static uint32_t last_time=0;
+//   uint32_t ms = millis();
 
+//   if((ms-last_time) > 1000) {  //run every 1s
+//     last_time = ms;
+//     int32_t calVal = nau.read();
+//     float mass = (calVal-3000)/600;
+//   }
 
-    while (mass != 0){
+//     while (mass != 0){
 
-      if (mass>0){
-        open();
-      }
-    } else if (mass<0){
-        close();
-    }
-
-}
-}
-
-*/
+//       if (mass>0){
+//         open();
+//       } else if (mass<0){
+//         close();
+//       }
+//   }
+// }
