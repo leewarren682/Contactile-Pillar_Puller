@@ -20,8 +20,6 @@ platformDistances = []
 # Create a function to read and process data from Teensy
 def process():
     global micros, forces, platformDistances  # Declare global variables
-
-
     line = ser.readline().decode('utf-8').strip() # Decode line from the serial port.
     sensorValues = line.split(',')
 
@@ -33,7 +31,7 @@ def process():
 
     print({line})
 
-# Function to save data to csv file when plot is closed
+# Function to save data to csv file
 def save_data():
     # Generate a unique filename using a timestamp
     timestamp  = tim.strftime("%Y%m%d-%H%M%S")
@@ -46,15 +44,6 @@ def save_data():
             writer.writerow([time, force, pos])
     
     return filename
-
-
-# Old code when GUI was not implemented.
-# try:
-#     while(True):
-#         process()
-# except KeyboardInterrupt:
-#     filename = save_data()
-#     print(f"Data save to {filename}")
 
 
 # -------------------- GUI IMPLEMENTATION -----------------------------------

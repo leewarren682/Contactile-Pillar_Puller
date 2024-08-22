@@ -52,13 +52,22 @@ void close() {
   stepper.setSpeed(-speed);
 }
 
-// Function to open the rig to a specific force.
-void open_till_force() {
-  Serial.println("Opening till force 4");
-  while (mass < 4) {
-    open();
+// Function to open the rig to a specific position provided in millimeters.
+void move_to_position(int desired_position) {
+  tmc.rms_current(1000);  //1000mA RMS
+  stepper.setSpeed(speed);
+  float converted_position = (desired_position / 2.00) * 3200.00;
+  stepper.moveTo(converted_position);
+
+  // Continuously run the motor until a force condition is met.
+  while (stepper.distanceToGo() != 0) {
+    stepper.run();
+    int32_t val = nau.read();
   }
+  stop();
 }
+
+
 
 void setup() {
   Serial.begin(115200);  //init serial port and set baudrate
@@ -135,13 +144,12 @@ void loop() {
   float mass = (val - 3000.0) / 600.0;
   float platformTravel = (float(stepper.currentPosition()) / 3200.00) * 2.00;
 
-// --- Print the values in serial format. So that it can be transformed into csv file.
+  // --- Print the values in serial format. So that it can be transformed into csv file.
   Serial.print(Ms);
   Serial.print(",");
   Serial.print(mass);
   Serial.print(",");
   Serial.println(platformTravel);
-  Serial.println("Opening till force 4");
 
 
 
@@ -154,7 +162,8 @@ void loop() {
   } else if (closeButtonState == LOW && openButtonState == HIGH) {
     close();
   } else {
-    open_till_force();
+    stop();
+    // move_to_position(10);
   }
   stepper.runSpeed();
 }
