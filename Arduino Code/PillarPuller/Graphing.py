@@ -1,8 +1,7 @@
 import serial
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-import csv
-import time as tim
+import numpy as np
 
 # Constants
 SERIAL_PORT = 'COM10'
@@ -26,65 +25,71 @@ micros = []
 forces = []
 platformDistances = []
 
-graphing_micros = []
-graphing_forces = []
-graphing_platformDistances = []
-
+# Initialize a counter to plot every x data points.
+counter = 0
 
 # Create a function to read and process data from Teensy
 def animate(frame):
-    global micros, forces, platformDistances  # Declare global variables
-    global graphing_micros, graphing_forces, graphing_platformDistances  # Declare global variables
+    global micros, forces, platformDistances, counter  # Declare global variables
 
-
-    line = ser.readline().decode('utf-8').strip() # Decode line from the serial port.
+    # Read data from the serial connection
+    line = ser.readline().decode('utf-8').strip()  # Decode line from the serial port.
     sensorValues = line.split(',')
 
     # Parsing and saving lines of data
     current_time = float(sensorValues[0])
-    micros.append(float(sensorValues[0]))
-    forces.append(float(sensorValues[1]))
-    platformDistances.append(float(sensorValues[2]))
-    
-    graphing_micros.append(float(sensorValues[0]))
-    graphing_forces.append(float(sensorValues[1]))
-    graphing_platformDistances.append(float(sensorValues[2]))
+    force = float(sensorValues[1])
+    platform_distance = float(sensorValues[2])
 
-    # Limit the number of displayed points
-    max_points = 20  # Adjust this value based on your needs
-    if len(micros) > max_points:
-        graphing_micros = graphing_micros[-max_points:]
-        graphing_forces = graphing_forces[-max_points:]
-        graphing_platformDistances = graphing_platformDistances[-max_points:]
+    # Increment the counter
+    counter += 1
 
-    # Update the data of the lines
-    line1.set_data(micros, platformDistances)
-    line2.set_data(micros, forces)
+     # Only append every 5th value
+    if counter % 5 == 0:
+        micros.append(current_time)
+        forces.append(force)
+        platformDistances.append(platform_distance)
 
-    # Adjust the plot limits
-    ax.relim()
-    ax.autoscale_view()
+        # Limit the number of displayed points
+        max_points = 10  # Adjust this value based on your needs
+        length = max(min(len(micros), max_points), 1)
 
-    print({line})
+        micros = micros[-length:]
+        forces = forces[-length:]
+        platformDistances = platformDistances[-length:]
+
+        # Update the data of the lines
+        line1.set_ydata(platformDistances)
+        line2.set_ydata(forces)
+
+        # Fill plot as data arrives, then start scrolling
+        if length <= max_points:
+            # X values
+            xs = list(range(0, length))
+            if length > 1:
+                ax.set_xlim(0, length - 1)
+            else:
+                ax.set_xlim(-0.5, 0.5)  # Set a small range to avoid singular transformation
+            line1.set_xdata(xs)
+            line2.set_xdata(xs)
+
+        # Auto scale y axis (only visible plots)
+        ymin = float("inf")
+        ymax = float("-inf")
+        for line in [line1, line2]:
+            a = line.get_alpha()
+            if a is None or a > 0:
+                lmin = np.min(line.get_ydata())
+                lmax = np.max(line.get_ydata())
+                if lmin < ymin:
+                    ymin = lmin
+                if lmax > ymax:
+                    ymax = lmax
+
+        yrange = ymax - ymin
+        ax.set_ylim(ymin - 0.1 * yrange, ymax + 0.1 * yrange)
 
     return line1, line2
 
-ani = FuncAnimation(fig, animate, interval=1, blit=True) #20ms draw freq
+ani = FuncAnimation(fig, animate, interval=20, blit=False, frames = 5000)  # 20ms draw freq
 plt.show()
-    
-# Function to save data to csv file when plot is closed
-def on_close(event):
-    # Generate a unique filename using a timestamp
-    timestamp  = tim.strftime("%Y%m%d-%H%M%S")
-    filename = f'pillar_puller_{timestamp}.csv'
-
-    with open(filename, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(['Time', 'Forces', 'Platform Position'])
-        for time, force, pos in zip(micros, forces, platformDistances):
-            writer.writerow([time, force, pos])
-
-    print(f"Data save to {filename}")
-
-fig.canvas.mpl_connect('close_event', on_close)
-
