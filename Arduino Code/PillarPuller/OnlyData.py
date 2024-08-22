@@ -83,5 +83,7 @@ button = tk.Button(
 
 button.pack()
 
+# Add a piece of text which shows the data.
+
 # Run the application's main event loop
 root.mainloop()

@@ -2,6 +2,7 @@
 #include <TMCStepper.h>
 #include <AccelStepper.h>
 #include <Adafruit_NAU7802.h>
+#include <Arduino.h>
 // #define EN_PIN    7 //enable ENABLE IS GROUNDED ON THE PCB - ACTIVE LOW
 // CHANGE THESE PIN NUMBERS TO MATCH THE SCHEMATIC
 #define DIR_PIN 20   //direction
@@ -32,6 +33,32 @@ float platformTravel;
 TMC5160Stepper tmc = TMC5160Stepper(CS_PIN, R_SENSE, MOSI_PIN, MISO_PIN, SCK_PIN);  //use software SPI
 AccelStepper stepper = AccelStepper(stepper.DRIVER, STEP_PIN, DIR_PIN);
 Adafruit_NAU7802 nau;
+
+// Function to stop the motor. Sets idle current to 400mA.
+void stop() {
+  stepper.setSpeed(0);
+  tmc.rms_current(400);
+}
+
+// Function to open the rig. Sets speed to constant.
+void open() {
+  tmc.rms_current(1000);  //1000mA RMS
+  stepper.setSpeed(speed);
+}
+
+// Function to close the rig. Sets speed to constant.
+void close() {
+  tmc.rms_current(1000);  //1000mA RMS
+  stepper.setSpeed(-speed);
+}
+
+// Function to open the rig to a specific force.
+void open_till_force() {
+  Serial.println("Opening till force 4");
+  while (mass < 4) {
+    open();
+  }
+}
 
 void setup() {
   Serial.begin(115200);  //init serial port and set baudrate
@@ -84,7 +111,6 @@ void setup() {
     Serial.println("Failed to calibrate internal offset, retrying!");
     delay(1000);
   }
-
 }
 
 void loop() {
@@ -116,7 +142,6 @@ void loop() {
   Serial.print(",");
   Serial.println(platformTravel);
   Serial.println("Opening till force 4");
-  open_till_force();
 
 
 
@@ -129,29 +154,7 @@ void loop() {
   } else if (closeButtonState == LOW && openButtonState == HIGH) {
     close();
   } else {
-    stop();
+    open_till_force();
   }
   stepper.runSpeed();
-}
-
-void stop() {
-  stepper.setSpeed(0);
-  tmc.rms_current(400);
-}
-
-void open() {
-  tmc.rms_current(1000);  //1000mA RMS
-  stepper.setSpeed(speed);
-}
-
-void close() {
-  tmc.rms_current(1000);  //1000mA RMS
-  stepper.setSpeed(-speed);
-}
-
-void open_till_force() {
-  Serial.println("Opening till force 4");
-  while (mass < 4) {
-    open();
-  }
 }
