@@ -91,7 +91,7 @@ filename_entry.pack(pady=10)
 
 # Add a clickable button to the main window
 start_button = tk.Button(
-    text="profile1",
+    text="Manual Mode",
     width=25,
     height=5,
     bg="purple",
