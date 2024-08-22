@@ -32,6 +32,9 @@ counter = 0
 def animate(frame):
     global micros, forces, platformDistances, counter  # Declare global variables
 
+    # Flush the input buffer to clear old data
+    ser.reset_input_buffer()
+
     # Read data from the serial connection
     line = ser.readline().decode('utf-8').strip()  # Decode line from the serial port.
     sensorValues = line.split(',')
@@ -44,14 +47,14 @@ def animate(frame):
     # Increment the counter
     counter += 1
 
-     # Only append every 5th value
-    if counter % 5 == 0:
+     # Only append every 2nd value
+    if counter % 2 == 0:
         micros.append(current_time)
         forces.append(force)
         platformDistances.append(platform_distance)
 
         # Limit the number of displayed points
-        max_points = 10  # Adjust this value based on your needs
+        max_points = 100  # Adjust this value based on your needs
         length = max(min(len(micros), max_points), 1)
 
         micros = micros[-length:]
