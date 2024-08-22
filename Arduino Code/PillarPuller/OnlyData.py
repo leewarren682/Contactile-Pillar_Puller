@@ -26,29 +26,42 @@ def process():
     else:
         filename = f'pillar_puller_{timestamp}.csv'
     
+    # Disable the start button
+    start_button.config(state=tk.DISABLED)
+    
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['Time', 'Forces', 'Platform Position'])
         
-        while running:
-            line = ser.readline().decode('utf-8').strip()  # Decode line from the serial port.
-            sensorValues = line.split(',')
-            current_time = float(sensorValues[0])
-            force = float(sensorValues[1])
-            platform_distance = float(sensorValues[2])
-            writer.writerow([current_time, force, platform_distance])
-
-            # Update the label with the most recent reading
-            data_var.set(f'Time: {current_time}, Force: {force}, Platform Position: {platform_distance}')
-
-            print(line)
-        
-        print(f'Data saved to {filename}')
+        try:
+            while running:
+                line = ser.readline().decode('utf-8').strip()  # Decode line from the serial port.
+                sensorValues = line.split(',')
+                current_time = float(sensorValues[0])
+                force = float(sensorValues[1])
+                platform_distance = float(sensorValues[2])
+                writer.writerow([current_time, force, platform_distance])
+                
+                # Update the label with the most recent reading
+                data_var.set(f'Time: {current_time}, Force: {force}, Platform Position: {platform_distance}')
+                
+                print(line)
+        finally:
+            # Re-enable the start button
+            start_button.config(state=tk.NORMAL)
+            print(f'Data saved to {filename}')
 
 # Function to trigger stop data reading and save data to csv file
 def stop():
     global running
     running = False
+    # Re-enable the start button
+    start_button.config(state=tk.NORMAL)
+
+# Function to handle window close event
+def on_closing():
+    stop()
+    root.destroy()
 
 # -------------------- GUI IMPLEMENTATION -----------------------------------
 # Create the main application window
@@ -71,6 +84,10 @@ data_var.set("No data yet")
 # Add a label to display the most recent reading
 data_label = tk.Label(root, textvariable=data_var)
 data_label.pack(pady=20)
+
+# Add an entry widget for the filename
+filename_entry = tk.Entry(root)
+filename_entry.pack(pady=10)
 
 # Add a clickable button to the main window
 start_button = tk.Button(
@@ -96,9 +113,8 @@ stop_button = tk.Button(
 
 stop_button.pack()
 
-# Add a text input box which allows us to give a filename, otherwise use the default filename.
-filename_entry = tk.Entry(root)
-filename_entry.pack()
+# Bind the window close event to the on_closing function
+root.protocol("WM_DELETE_WINDOW", on_closing)
 
 # Run the application's main event loop
 root.mainloop()
