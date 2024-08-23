@@ -67,6 +67,23 @@ void move_to_position(int desired_position) {
   stop();
 }
 
+// Function to open/close the rig to a specific force provided in Newtons.
+void move_to_force(int desired_force) {
+  tmc.rms_current(1000);  //1000mA RMS
+  float converted_force = (desired_force * 600.0) + 3200.0;
+
+  // Continuously run the motor until a force condition is met.
+  while (nau.read() != converted_force) {
+    if (nau.read() > converted_force) {
+      stepper.setSpeed(speed);
+    } else {
+      stepper.setSpeed(-speed);
+    }
+    stepper.run();
+  }
+  stop();
+}
+
 
 
 void setup() {
@@ -163,7 +180,6 @@ void loop() {
     close();
   } else {
     stop();
-    // move_to_position(10);
   }
   stepper.runSpeed();
 }
