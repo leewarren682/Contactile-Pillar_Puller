@@ -30,14 +30,16 @@ class serialBuffer():
     def populate(self):
         while self.ser.is_open and self.ser.readable():
             line = self.ser.readline().decode('utf-8').strip()  # Decode line from the serial port.
-            sensorValues = line.split(',')
-            current_time = float(sensorValues[0])
-            force = float(sensorValues[1])
-            platform_distance = float(sensorValues[2])
-            # Append the data to the lists
-            self.micros.append(current_time)
-            self.forces.append(force)
-            self.platformDistances.append(platform_distance)
+            if line.__contains__(','): # Menial implementation, should have a more robust check like fuzzy matching or identifier for the data.
+                sensorValues = line.split(',')
+                current_time = float(sensorValues[0])
+                force = float(sensorValues[1])
+                platform_distance = float(sensorValues[2])
+                # Append the data to the lists
+                self.micros.append(current_time)
+                self.forces.append(force)
+                self.platformDistances.append(platform_distance)
+
 
     def get_data(self):
         return self.micros, self.forces, self.platformDistances

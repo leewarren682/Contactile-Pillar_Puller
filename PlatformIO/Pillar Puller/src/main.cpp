@@ -68,15 +68,14 @@ void close() {
 
 // Function to open the rig to a specific position provided in millimeters.
 void move_to_position(int desired_position) {
-  tmc.rms_current(1000);  //1000mA RMS
-  stepper.setSpeed(speed);
+
   float converted_position = (desired_position / 2.00) * 3200.00;
   stepper.moveTo(converted_position);
+  stepper.setSpeed(speed);
 
   // Continuously run the motor until a force condition is met.
   while (stepper.distanceToGo() != 0) {
     stepper.run();
-    int32_t val = nau.read();
   }
   stop();
 }
@@ -100,12 +99,12 @@ void processCommand(String command) {
     }
   } else if (command.startsWith("stop")) {
     stop();
-  } else if (command.startsWith("move_to_position")) {
-      int desired_position = command.substring(17).toInt();
-      while (Serial.available() == 0) {
-        Serial.println(desired_position);
-        // move_to_position(desired_position);
-      }
+  } else if (command.indexOf("move_to_position") != -1) {
+    int desired_position = command.substring(strlen("move_to_position")).toInt();
+    while (Serial.available() == 0) {
+      move_to_position(desired_position);
+      readAndPrintData();
+    }
   } else {
     Serial.println("Invalid command");
   }
@@ -175,7 +174,7 @@ void loop() {
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
     processCommand(command);
-    SerialUSB1.print(command);
+    // SerialUSB1.print(command);
   }
 
   if ((ms - last_time) > 1000)  //run every 1s
