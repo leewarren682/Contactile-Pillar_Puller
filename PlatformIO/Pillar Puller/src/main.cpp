@@ -80,8 +80,29 @@ void move_to_position(int desired_position) {
   stop();
 }
 
-// Function to process the commands received from the serial port.
+// Function to open the rige to a specific force provided in Newtons.
+void move_to_force(int desired_force) {
+  while (mass < desired_force) {
+    open();
+    stepper.run();
+    readAndPrintData();
+  }
+  stop(); // Stop the motor after the desired force is reached.
+}
 
+// Function to use a homing switch to find the zero position.
+void home() {
+  SerialUSB1.println("Homing...");
+  while (limitSwitchState == HIGH) {
+    stepper.setSpeed(speed);
+    stepper.run();
+  }
+  stop();
+  stepper.setCurrentPosition(24);
+  move_to_position(0);
+}
+
+// Function to process the commands received from the serial port.
 void processCommand(String command) {
 
   if (command.startsWith("open")) { // Find a command to remove whitespace
@@ -105,6 +126,14 @@ void processCommand(String command) {
       move_to_position(desired_position);
       readAndPrintData();
     }
+  } else if (command.indexOf("move_to_force") != -1) {
+      int desired_force = command.substring(strlen("move_to_force")).toInt();
+      while (Serial.available() == 0) {
+        move_to_force(desired_force);
+        readAndPrintData();
+      }
+  } else if (command.startsWith("home")) {
+      home();
   } else {
     Serial.println("Invalid command");
   }
@@ -144,7 +173,7 @@ void setup() {
 
   pinMode(OPEN_BUTTON_PIN, INPUT_PULLUP);
   pinMode(CLOSE_BUTTON_PIN, INPUT_PULLUP);
-  pinMode(LIMIT_SWITCH_PIN, INPUT_PULLUP);
+  pinMode(LIMIT_SWITCH_PIN, INPUT_PULLUP); // Homing switch
   Serial.println("NAU7802");
   if (!nau.begin()) {
     Serial.println("Failed to find NAU7802");
@@ -174,8 +203,8 @@ void loop() {
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
     processCommand(command);
-    // SerialUSB1.print(command);
   }
+
 
   if ((ms - last_time) > 1000)  //run every 1s
   {
@@ -204,6 +233,15 @@ void loop() {
 
   openButtonState = digitalRead(OPEN_BUTTON_PIN);
   closeButtonState = digitalRead(CLOSE_BUTTON_PIN);
+  limitSwitchState = digitalRead(LIMIT_SWITCH_PIN);
+
+  // Print the state of the opening homing switch
+  // SerialUSB1.print("Limit Switch is ");
+  // if (limitSwitchState == HIGH) {
+  //   SerialUSB1.println("HIGH");
+  // } else {
+  //   SerialUSB1.println("LOW");
+  // }
 
   if (openButtonState == LOW && closeButtonState == HIGH) {
     open();

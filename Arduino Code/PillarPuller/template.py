@@ -106,6 +106,10 @@ class App(customtkinter.CTk):
         self.open_button = customtkinter.CTkButton(self, text="stop", command=self.stop)
         self.open_button.grid(row=0, column=0, padx=20, pady=(750, 10), sticky="ew")
 
+        # Add button to home
+        self.homing_button = customtkinter.CTkButton(self, text="home", command=self.home)
+        self.homing_button.grid(row=0, column=0, padx=20, pady=(675, 10), sticky="ew")
+
         # create central tabview
         self.tabview = customtkinter.CTkTabview(self)
         self.tabview.grid(row=0, column=1, sticky="nsew", padx=(2,2), pady=(0,2))
@@ -202,6 +206,10 @@ class App(customtkinter.CTk):
     # Function which tells the Teensy to move to a specific force.
     def move_to_force(self, force):
         self.buffer.send_command(f"move_to_force{force}")
+    
+    # Function which tells the Teensy to home.
+    def home(self):
+        self.buffer.send_command("home")
 
     # Function to log the most recent data point from the buffer periodically
     def log_buffer_periodically(self):
