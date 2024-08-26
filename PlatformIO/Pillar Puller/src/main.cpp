@@ -34,6 +34,20 @@ TMC5160Stepper tmc = TMC5160Stepper(CS_PIN, R_SENSE, MOSI_PIN, MISO_PIN, SCK_PIN
 AccelStepper stepper = AccelStepper(stepper.DRIVER, STEP_PIN, DIR_PIN);
 Adafruit_NAU7802 nau;
 
+// Function to read and print data
+void readAndPrintData() {
+  int32_t val = nau.read();
+  float mass = (val - 3000.0) / 600.0;
+  float platformTravel = (float(stepper.currentPosition()) / 3200.00) * 2.00;
+
+  // Print the values in serial format
+  Serial.print(millis());
+  Serial.print(",");
+  Serial.print(mass);
+  Serial.print(",");
+  Serial.println(platformTravel);
+}
+
 // Function to stop the motor. Sets idle current to 400mA.
 void stop() {
   stepper.setSpeed(0);
@@ -67,10 +81,41 @@ void move_to_position(int desired_position) {
   stop();
 }
 
+// Function to process the commands received from the serial port.
+
+void processCommand(String command) {
+
+  if (command.startsWith("open")) { // Find a command to remove whitespace
+    // Run the open command until another command is received.
+    while (Serial.available() == 0) {
+      open();
+      stepper.run();
+      readAndPrintData();
+    }
+  } else if (command.startsWith("close")) {
+    while (Serial.available() == 0) {
+      close();
+      stepper.run();
+      readAndPrintData();
+    }
+  } else if (command.startsWith("stop")) {
+    stop();
+  } else if (command.startsWith("move_to_position")) {
+      int desired_position = command.substring(17).toInt();
+      while (Serial.available() == 0) {
+        Serial.println(desired_position);
+        // move_to_position(desired_position);
+      }
+  } else {
+    Serial.println("Invalid command");
+  }
+}
+
 
 
 void setup() {
   Serial.begin(115200);  //init serial port and set baudrate
+  SerialUSB1.begin(115200);
 
   //set pins
   pinMode(DIR_PIN, OUTPUT);
@@ -126,6 +171,13 @@ void loop() {
   static uint32_t last_time = 0;
   uint32_t ms = millis();
   uint32_t Ms = micros();
+
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+    processCommand(command);
+    SerialUSB1.print(command);
+  }
+
   if ((ms - last_time) > 1000)  //run every 1s
   {
     last_time = ms;
@@ -151,9 +203,6 @@ void loop() {
   Serial.print(",");
   Serial.println(platformTravel);
 
-
-
-
   openButtonState = digitalRead(OPEN_BUTTON_PIN);
   closeButtonState = digitalRead(CLOSE_BUTTON_PIN);
 
@@ -163,7 +212,6 @@ void loop() {
     close();
   } else {
     stop();
-    // move_to_position(10);
   }
   stepper.runSpeed();
 }

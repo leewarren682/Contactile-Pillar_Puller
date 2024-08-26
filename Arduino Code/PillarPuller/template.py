@@ -11,13 +11,14 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
+import re
 
 customtkinter.set_appearance_mode("Light")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 class serialBuffer():
     # Constants
-    SERIAL_PORT = 'COM10'
+    SERIAL_PORT = 'COM3'
     BAUD_RATE = 115200
 
     def __init__(self):
@@ -27,10 +28,9 @@ class serialBuffer():
         self.ser = serial.Serial(self.SERIAL_PORT, self.BAUD_RATE)
 
     def populate(self):
-        while self.ser.is_open:
+        while self.ser.is_open and self.ser.readable():
             line = self.ser.readline().decode('utf-8').strip()  # Decode line from the serial port.
             sensorValues = line.split(',')
-            # Read the data from the serial connection
             current_time = float(sensorValues[0])
             force = float(sensorValues[1])
             platform_distance = float(sensorValues[2])
@@ -41,6 +41,9 @@ class serialBuffer():
 
     def get_data(self):
         return self.micros, self.forces, self.platformDistances
+
+    def send_command(self, command):
+        self.ser.write((command + '\n').encode('utf-8'))
 
 class App(customtkinter.CTk):
     def __init__(self, buffer):
@@ -76,6 +79,30 @@ class App(customtkinter.CTk):
         self.filename_entry.grid(row=0, column=0, padx=20, pady=(0, 5), sticky="ew")
         self.generate_csv_button = customtkinter.CTkButton(self, text="Generate CSV", command=lambda: self.generate_csv(self.filename_entry.get()))
         self.generate_csv_button.grid(row=0, column=0, padx=20, pady=(70, 10), sticky="ew")
+
+        # Add entry box and button for target_position
+        self.position_entry = customtkinter.CTkEntry(self, placeholder_text="Enter a position (mm)")
+        self.position_entry.grid(row=0, column=0, padx=20, pady=(150, 5), sticky="ew")
+        self.generate_position_button = customtkinter.CTkButton(self, text="Move to Distance", command=lambda: self.move_to_position(self.position_entry.get()))
+        self.generate_position_button.grid(row=0, column=0, padx=20, pady=(220, 10), sticky="ew")
+
+        # Add entry box and button for target_force
+        self.force_entry = customtkinter.CTkEntry(self, placeholder_text="Enter a Force (N)")
+        self.force_entry.grid(row=0, column=0, padx=20, pady=(300, 5), sticky="ew")
+        self.generate_force_button = customtkinter.CTkButton(self, text="Move to Force", command=lambda: self.move_to_force(self.force_entry.get()))
+        self.generate_force_button.grid(row=0, column=0, padx=20, pady=(370, 10), sticky="ew")
+
+        # Add button to open
+        self.open_button = customtkinter.CTkButton(self, text="open", command=self.open_rig)
+        self.open_button.grid(row=0, column=0, padx=20, pady=(450, 10), sticky="ew")
+
+        # Add button to close
+        self.open_button = customtkinter.CTkButton(self, text="close", command=self.close)
+        self.open_button.grid(row=0, column=0, padx=20, pady=(600, 10), sticky="ew")
+
+        # Add button to stop
+        self.open_button = customtkinter.CTkButton(self, text="stop", command=self.stop)
+        self.open_button.grid(row=0, column=0, padx=20, pady=(750, 10), sticky="ew")
 
         # create central tabview
         self.tabview = customtkinter.CTkTabview(self)
@@ -154,13 +181,33 @@ class App(customtkinter.CTk):
             for i in range(len(self.buffer.micros)):
                 writer.writerow([self.buffer.micros[i], self.buffer.forces[i], self.buffer.platformDistances[i]])
 
+    # Function which tells the Teensy to stop the motor.
+    def stop(self):
+        self.buffer.send_command("stop")
+    
+    # Funcion which tells the Teensy to open.
+    def open_rig(self):
+        self.buffer.send_command("open")
+    
+    # Function which tells the Teensy to close.
+    def close(self):
+        self.buffer.send_command("close")
+
+    # Function which tells the Teensy to move to a specific position.
+    def move_to_position(self, position):
+        self.buffer.send_command(f"move_to_position{position}")
+
+    # Function which tells the Teensy to move to a specific force.
+    def move_to_force(self, force):
+        self.buffer.send_command(f"move_to_force{force}")
+
     # Function to log the most recent data point from the buffer periodically
     def log_buffer_periodically(self):
         ''' Log the most recent data point from the buffer periodically '''
         micros, forces, platformDistances = self.buffer.get_data()
         if micros and forces and platformDistances:  # Check if there is data in the buffer
             self.logger.info(f"Time: {micros[-1]}, Forces: {forces[-1]}, Platform Position: {platformDistances[-1]}")
-        self.after(2, self.log_buffer_periodically)  # Schedule this method to run again after 100 ms (0.1 second)
+        self.after(5000, self.log_buffer_periodically)  # Schedule this method to run again after 5000 ms (5 second)
 
     # Function to set up the graph
     def setup_graph(self):
@@ -233,8 +280,7 @@ class App(customtkinter.CTk):
         return self.line1, self.line2
 
     def on_closing(self):
-        if tkinter.messagebox.askokcancel("Quit", "Do you want to quit?"):
-            self.destroy()
+        self.buffer.ser.close()  # Close the serial port
 
 ### WARNING: This is not thread safe. Look at https://github.com/beenje/tkinter-logging-text-widget for a thread-safe logger
 class TextHandler(logging.Handler):
@@ -274,3 +320,6 @@ if __name__ == "__main__":
 
     app = App(buffer)
     app.mainloop()
+    app.on_closing()
+
+    buffer.ser.close()
