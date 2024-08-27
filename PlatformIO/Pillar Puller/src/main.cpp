@@ -48,25 +48,19 @@ Adafruit_NAU7802 nau;
 // Create a low pass filter class.
 class LowPassFilter {
   public:
-    LowPassFilter(float alpha) {
+    LowPassFilter(float alpha, float initial_value) {
       _alpha = alpha;
-      _first = true;
+      _filtered_value = initial_value;
     }
 
     float filter(float value) {
-      if (_first) {
-        _first = false;
-        _filtered_value = value;
-      } else {
-        _filtered_value = _alpha * value + (1 - _alpha) * _filtered_value;
-      }
+      _filtered_value = _alpha * value + (1 - _alpha) * _filtered_value;
       return _filtered_value;
     }
 
   private:
     float _alpha;
     float _filtered_value;
-    bool _first;
 };
 
 // Function to read and print data
@@ -74,11 +68,16 @@ void readAndPrintData() {
   int32_t val = nau.read();
   float mass = (val - 3000.0) / 600.0;
   float platformTravel = (float(stepper.currentPosition()) / 3200.00) * 2.00;
-  float filtered_mass = 0;
+  float a = 0.35;
+  static float previous_filtered_mass = mass;
+  float filtered_mass = mass * a + (previous_filtered_mass * (1-a));
+  previous_filtered_mass = filtered_mass;
 
-  // Filter the force values.
-  LowPassFilter filter(0.8);
-  filter.filter(mass);
+  SerialUSB1.print("Current Mass: ");
+  SerialUSB1.println(mass);
+  SerialUSB1.print("Filtered mass: ");
+  SerialUSB1.println(filtered_mass);
+
 
   // Print the values in serial format
   Serial.print(millis());
@@ -87,7 +86,7 @@ void readAndPrintData() {
   Serial.print(",");
   Serial.print(platformTravel);
   Serial.print(",");
-  Serial.println(filter.filter(mass));
+  Serial.println(filtered_mass);
 }
 
 // Function to stop the motor. Sets idle current to 400mA.
@@ -306,7 +305,6 @@ void loop() {
 
   static uint32_t last_time = 0;
   uint32_t ms = millis();
-  uint32_t Ms = micros();
 
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');

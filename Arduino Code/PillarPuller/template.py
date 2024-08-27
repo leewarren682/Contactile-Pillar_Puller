@@ -25,24 +25,28 @@ class serialBuffer():
         self.micros = []
         self.forces = []
         self.platformDistances = []
+        self.filtered_forces = []
         self.ser = serial.Serial(self.SERIAL_PORT, self.BAUD_RATE)
 
     def populate(self):
         while self.ser.is_open and self.ser.readable():
-            line = self.ser.readline().decode('utf-8').strip()  # Decode line from the serial port.
-            if line.__contains__(','): # Menial implementation, should have a more robust check like fuzzy matching or identifier for the data.
+            line = self.ser.readline().decode('utf-8').strip()
+            if ',' in line:
                 sensorValues = line.split(',')
                 current_time = float(sensorValues[0])
                 force = float(sensorValues[1])
                 platform_distance = float(sensorValues[2])
+                filtered_force = float(sensorValues[3])  # Calculate filtered force
+
                 # Append the data to the lists
                 self.micros.append(current_time)
                 self.forces.append(force)
                 self.platformDistances.append(platform_distance)
-
+                self.filtered_forces.append(filtered_force)
+                print(line)
 
     def get_data(self):
-        return self.micros, self.forces, self.platformDistances
+        return self.micros, self.forces, self.platformDistances, self.filtered_forces
 
     def send_command(self, command):
         self.ser.write((command + '\n').encode('utf-8'))
@@ -221,9 +225,9 @@ class App(customtkinter.CTk):
     # Function to log the most recent data point from the buffer periodically
     def log_buffer_periodically(self):
         ''' Log the most recent data point from the buffer periodically '''
-        micros, forces, platformDistances = self.buffer.get_data()
+        micros, forces, platformDistances, filtered_forces = self.buffer.get_data()
         if micros and forces and platformDistances:  # Check if there is data in the buffer
-            self.logger.info(f"Time: {micros[-1]}, Forces: {forces[-1]}, Platform Position: {platformDistances[-1]}")
+            self.logger.info(f"Time: {micros[-1]}, Forces: {forces[-1]}, Platform Position: {platformDistances[-1]}, Filtered Forces: {filtered_forces[-1]}")
         self.after(5000, self.log_buffer_periodically)  # Schedule this method to run again after 5000 ms (5 second)
 
     # Function to set up the graph
@@ -232,6 +236,7 @@ class App(customtkinter.CTk):
         self.ax.set_aspect('auto')
         self.line1, = self.ax.plot([], [], label='Platform Distances')
         self.line2, = self.ax.plot([], [], label='Forces')
+        self.line3, = self.ax.plot([], [], label='Filtered Forces')  # Add line for filtered forces
         self.ax.legend(loc='upper left')
         self.ax.set_title('Pillar Puller Data')
 
@@ -242,18 +247,20 @@ class App(customtkinter.CTk):
         self.micros = []
         self.forces = []
         self.platformDistances = []
+        self.filtered_forces = []
         self.counter = 0
 
         self.ani = FuncAnimation(self.fig, self.animate, interval=10, blit=True)
 
     # Function to animate the graph
     def animate(self, frame):
-        micros, forces, platformDistances = self.buffer.get_data()
+        micros, forces, platformDistances, filtered_forces = self.buffer.get_data()
 
         if len(micros) > 0 and len(forces) > 0 and len(platformDistances) > 0:
             current_time = micros[-1]
             force = forces[-1]
             platform_distance = platformDistances[-1]
+            filtered_force = filtered_forces[-1]
 
             self.counter += 1
 
@@ -261,6 +268,7 @@ class App(customtkinter.CTk):
                 self.micros.append(current_time)
                 self.forces.append(force)
                 self.platformDistances.append(platform_distance)
+                self.filtered_forces.append(filtered_force)
 
                 max_points = 100
                 length = max(min(len(self.micros), max_points), 1)
@@ -268,9 +276,11 @@ class App(customtkinter.CTk):
                 self.micros = self.micros[-length:]
                 self.forces = self.forces[-length:]
                 self.platformDistances = self.platformDistances[-length:]
+                self.filtered_forces = self.filtered_forces[-length:]
 
                 self.line1.set_ydata(self.platformDistances)
                 self.line2.set_ydata(self.forces)
+                self.line3.set_ydata(self.filtered_forces)
 
                 if length <= max_points:
                     xs = list(range(0, length))
@@ -280,6 +290,7 @@ class App(customtkinter.CTk):
                     # self.ax.set_xlim(-0.5, 0.5)
                     self.line1.set_xdata(xs)
                     self.line2.set_xdata(xs)
+                    self.line3.set_xdata(xs)
 
                 ymin = float("inf")
                 ymax = float("-inf")
@@ -313,7 +324,7 @@ class App(customtkinter.CTk):
                 # Flush events to update the plot
                 # self.canvas.draw()
                 # self.ax.figure.canvas.flush_events()
-        return self.line1, self.line2
+        return self.line1, self.line2, self.line3
 
     def on_closing(self):
         self.buffer.ser.close()  # Close the serial port
