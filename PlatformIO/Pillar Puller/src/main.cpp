@@ -74,10 +74,11 @@ void readAndPrintData() {
   int32_t val = nau.read();
   float mass = (val - 3000.0) / 600.0;
   float platformTravel = (float(stepper.currentPosition()) / 3200.00) * 2.00;
-  
+  float filtered_mass = 0;
+
   // Filter the force values.
   LowPassFilter filter(0.8);
-  float filtered_mass = filter.filter(mass);
+  filter.filter(mass);
 
   // Print the values in serial format
   Serial.print(millis());
@@ -86,7 +87,7 @@ void readAndPrintData() {
   Serial.print(",");
   Serial.print(platformTravel);
   Serial.print(",");
-  Serial.println(filtered_mass);
+  Serial.println(filter.filter(mass));
 }
 
 // Function to stop the motor. Sets idle current to 400mA.
@@ -305,6 +306,7 @@ void loop() {
 
   static uint32_t last_time = 0;
   uint32_t ms = millis();
+  uint32_t Ms = micros();
 
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
