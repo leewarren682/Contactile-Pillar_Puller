@@ -3,6 +3,7 @@
 #include <AccelStepper.h>
 #include <Adafruit_NAU7802.h>
 #include <Arduino.h>
+#include <bounce2.h>
 // #define EN_PIN    7 //enable ENABLE IS GROUNDED ON THE PCB - ACTIVE LOW
 // CHANGE THESE PIN NUMBERS TO MATCH THE SCHEMATIC
 #define DIR_PIN 20   //direction
@@ -17,9 +18,19 @@ int closeButtonState = 0;
 int limitSwitchState = 0;
 int speed = 1500;
 
+// Variables for debouncing
+unsigned long lastDebounceTime = 0;
+unsigned long debounceDelay = 50; // milliseconds
+int lastSwitchState = LOW;
+int switchState;
+
 // Variables to be plotted (force and platform position)
 float mass;
 float platformTravel;
+
+// Bounce2 library button initialization
+// INSTANTIATE A Button OBJECT
+Bounce2::Button limitSwitch = Bounce2::Button();
 
 
 // CHANGE THESE PIN NUMBERS TO MATCH THE SCHEMATIC
@@ -52,6 +63,7 @@ void readAndPrintData() {
 void stop() {
   stepper.setSpeed(0);
   tmc.rms_current(400);
+  readAndPrintData();
 }
 
 // Function to open the rig. Sets speed to constant.
@@ -75,6 +87,7 @@ void move_to_position(int desired_position) {
 
   // Continuously run the motor until a force condition is met.
   while (stepper.distanceToGo() != 0) {
+    readAndPrintData();
     stepper.run();
   }
   stop();
@@ -90,16 +103,62 @@ void move_to_force(int desired_force) {
   stop(); // Stop the motor after the desired force is reached.
 }
 
+void readLimitSwitch() {
+  limitSwitch.update();
+  int reading = digitalRead(LIMIT_SWITCH_PIN);
+  lastSwitchState = reading;
+}
+
 // Function to use a homing switch to find the zero position.
 void home() {
-  SerialUSB1.println("Homing...");
+  limitSwitchState = digitalRead(LIMIT_SWITCH_PIN);
   while (limitSwitchState == HIGH) {
     stepper.setSpeed(speed);
     stepper.run();
+    limitSwitchState = digitalRead(LIMIT_SWITCH_PIN);
+    readLimitSwitch(); // Continuously read the switch state
+    readAndPrintData();
+  
+    if (limitSwitchState == LOW) {
+      break;
+    }
+  }
+
+  SerialUSB1.println("Limit switch is pressed, stopping and breaking out of the loop.");
+  stop();
+  SerialUSB1.println("Stopped. Setting the current position to 24.");
+  stepper.setCurrentPosition(0);
+  SerialUSB1.println("Moving to position 0.");
+  move_to_position(-22);
+  stepper.setCurrentPosition(0);
+  SerialUSB1.println("Homing complete.");
+}
+
+// Function to detect if the rig has reached a failure force.
+// If the current force is lower than the previous force by 50%, stop the motor.
+boolean break_detection() {
+  float previous_mass = mass;
+  SerialUSB1.print("Previous mass: ");
+  SerialUSB1.println(previous_mass);
+  readAndPrintData();
+  SerialUSB1.print("Current mass: ");
+  SerialUSB1.println(mass);
+  if (mass < (previous_mass / 1.2)) {
+    SerialUSB1.println("Force has decreased by 1.2x, stopping the motor.");
+    stop();
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// Function which opens the rig until a failure force is detected or the limit switch is hit.
+void open_until_break() {
+  while (break_detection() == false) {
+    open();
+    stepper.run();
   }
   stop();
-  stepper.setCurrentPosition(24);
-  move_to_position(0);
 }
 
 // Function to process the commands received from the serial port.
@@ -134,6 +193,8 @@ void processCommand(String command) {
       }
   } else if (command.startsWith("home")) {
       home();
+  } else if (command.startsWith("open_until_break")) {
+      open_until_break();
   } else {
     Serial.println("Invalid command");
   }
@@ -158,6 +219,18 @@ void setup() {
   digitalWrite(MISO_PIN, HIGH);
   pinMode(SCK_PIN, OUTPUT);
   digitalWrite(SCK_PIN, LOW);
+
+  // SELECT ONE OF THE FOLLOWING :
+  // 1) IF YOUR BUTTON HAS AN INTERNAL PULL-UP
+  // button.attach( BUTTON_PIN ,  INPUT_PULLUP ); // USE INTERNAL PULL-UP
+  // 2) IF YOUR BUTTON USES AN EXTERNAL PULL-UP
+  limitSwitch.attach(LIMIT_SWITCH_PIN, INPUT_PULLUP);
+
+  // Debounce interval in milliseconds
+  limitSwitch.interval(5);
+
+  // Indicate that low state is physically pressing the button
+  limitSwitch.setPressedState(LOW);
 
   //Set driver config
   tmc.begin();
@@ -196,6 +269,9 @@ void setup() {
 }
 
 void loop() {
+  // Update the limit switch every loop.
+  limitSwitch.update();
+
   static uint32_t last_time = 0;
   uint32_t ms = millis();
   uint32_t Ms = micros();
@@ -218,24 +294,15 @@ void loop() {
     if (tmc.ola()) { Serial.println(F("Open Load A")); }
     if (tmc.olb()) { Serial.println(F("Open Load B")); }
   }
-  // Serial.print("reading from the nau");
 
-  int32_t val = nau.read();
-  float mass = (val - 3000.0) / 600.0;
-  float platformTravel = (float(stepper.currentPosition()) / 3200.00) * 2.00;
-
-  // --- Print the values in serial format. So that it can be transformed into csv file.
-  Serial.print(Ms);
-  Serial.print(",");
-  Serial.print(mass);
-  Serial.print(",");
-  Serial.println(platformTravel);
+  // Read and print the data
+  readAndPrintData();
 
   openButtonState = digitalRead(OPEN_BUTTON_PIN);
   closeButtonState = digitalRead(CLOSE_BUTTON_PIN);
   limitSwitchState = digitalRead(LIMIT_SWITCH_PIN);
 
-  // Print the state of the opening homing switch
+  // // Print the state of the limit switch
   // SerialUSB1.print("Limit Switch is ");
   // if (limitSwitchState == HIGH) {
   //   SerialUSB1.println("HIGH");

@@ -110,6 +110,10 @@ class App(customtkinter.CTk):
         self.homing_button = customtkinter.CTkButton(self, text="home", command=self.home)
         self.homing_button.grid(row=0, column=0, padx=20, pady=(675, 10), sticky="ew")
 
+        # Add button to to open until a break is detected.
+        self.open_until_break_button = customtkinter.CTkButton(self, text="open until break", command= self.open_until_break)
+        self.open_until_break_button.grid(row=0, column=0, padx=20, pady=(525, 10), sticky="ew")
+
         # create central tabview
         self.tabview = customtkinter.CTkTabview(self)
         self.tabview.grid(row=0, column=1, sticky="nsew", padx=(2,2), pady=(0,2))
@@ -211,6 +215,9 @@ class App(customtkinter.CTk):
     def home(self):
         self.buffer.send_command("home")
 
+    def open_until_break(self):
+        self.buffer.send_command("open_until_break")
+
     # Function to log the most recent data point from the buffer periodically
     def log_buffer_periodically(self):
         ''' Log the most recent data point from the buffer periodically '''
@@ -285,7 +292,7 @@ class App(customtkinter.CTk):
                             ymax = lmax
 
                 yrange = ymax - ymin
-                self.ax.set_ylim(ymin - 0.1 * yrange, ymax + 0.1 * yrange)
+                self.ax.set_ylim(ymin - 1 * yrange, ymax + 1 * yrange)
 
         return self.line1, self.line2
 
