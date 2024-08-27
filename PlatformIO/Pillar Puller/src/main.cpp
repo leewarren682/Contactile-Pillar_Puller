@@ -45,18 +45,48 @@ TMC5160Stepper tmc = TMC5160Stepper(CS_PIN, R_SENSE, MOSI_PIN, MISO_PIN, SCK_PIN
 AccelStepper stepper = AccelStepper(stepper.DRIVER, STEP_PIN, DIR_PIN);
 Adafruit_NAU7802 nau;
 
+// Create a low pass filter class.
+class LowPassFilter {
+  public:
+    LowPassFilter(float alpha) {
+      _alpha = alpha;
+      _first = true;
+    }
+
+    float filter(float value) {
+      if (_first) {
+        _first = false;
+        _filtered_value = value;
+      } else {
+        _filtered_value = _alpha * value + (1 - _alpha) * _filtered_value;
+      }
+      return _filtered_value;
+    }
+
+  private:
+    float _alpha;
+    float _filtered_value;
+    bool _first;
+};
+
 // Function to read and print data
 void readAndPrintData() {
   int32_t val = nau.read();
   float mass = (val - 3000.0) / 600.0;
   float platformTravel = (float(stepper.currentPosition()) / 3200.00) * 2.00;
+  
+  // Filter the force values.
+  LowPassFilter filter(0.8);
+  float filtered_mass = filter.filter(mass);
 
   // Print the values in serial format
   Serial.print(millis());
   Serial.print(",");
   Serial.print(mass);
   Serial.print(",");
-  Serial.println(platformTravel);
+  Serial.print(platformTravel);
+  Serial.print(",");
+  Serial.println(filtered_mass);
 }
 
 // Function to stop the motor. Sets idle current to 400mA.
@@ -143,7 +173,7 @@ boolean break_detection() {
   readAndPrintData();
   SerialUSB1.print("Current mass: ");
   SerialUSB1.println(mass);
-  if (mass < (previous_mass / 1.2)) {
+  if (mass < (previous_mass * 0.8)) {
     SerialUSB1.println("Force has decreased by 1.2x, stopping the motor.");
     stop();
     return true;
@@ -155,9 +185,10 @@ boolean break_detection() {
 // Function which opens the rig until a failure force is detected or the limit switch is hit.
 void open_until_break() {
   while (break_detection() == false) {
-    open();
-    stepper.run();
+    // open();
+    // stepper.run();
   }
+  SerialUSB1.println("BREAK HAS BEEN DETECTED, STOPPING.");
   stop();
 }
 
@@ -274,7 +305,6 @@ void loop() {
 
   static uint32_t last_time = 0;
   uint32_t ms = millis();
-  uint32_t Ms = micros();
 
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');

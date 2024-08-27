@@ -229,6 +229,7 @@ class App(customtkinter.CTk):
     # Function to set up the graph
     def setup_graph(self):
         self.fig, self.ax = plt.subplots()
+        self.ax.set_aspect('auto')
         self.line1, = self.ax.plot([], [], label='Platform Distances')
         self.line2, = self.ax.plot([], [], label='Forces')
         self.ax.legend(loc='upper left')
@@ -236,6 +237,7 @@ class App(customtkinter.CTk):
 
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.tabview.tab("Home"))
         self.canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew")
+
 
         self.micros = []
         self.forces = []
@@ -272,10 +274,10 @@ class App(customtkinter.CTk):
 
                 if length <= max_points:
                     xs = list(range(0, length))
-                    if length > 1:
-                        self.ax.set_xlim(0, length - 1)
-                    else:
-                        self.ax.set_xlim(-0.5, 0.5)
+                    # if length > 1:
+                    self.ax.set_xlim(0, length - 1)
+                    # else:
+                    # self.ax.set_xlim(-0.5, 0.5)
                     self.line1.set_xdata(xs)
                     self.line2.set_xdata(xs)
 
@@ -292,8 +294,25 @@ class App(customtkinter.CTk):
                             ymax = lmax
 
                 yrange = ymax - ymin
-                self.ax.set_ylim(ymin - 1 * yrange, ymax + 1 * yrange)
+                print(f"ymin: {ymin}, ymax: {ymax}, yrange: {yrange}")
+                # Calculate new y-axis limits
+                new_ymin = ymin - 0.1 * yrange
+                new_ymax = ymax + 0.1 * yrange
+                current_ymin, current_ymax = self.ax.get_ylim()
+                if new_ymin != current_ymin or new_ymax != current_ymax:
+                    self.ax.set_ylim(new_ymin, new_ymax)
+                    
+                    self.ax.autoscale_view()
+                    self.ax.autoscale(enable=True, axis='y')
+                    self.ax.relim()
+                    # Flush events to update the plot
+                    self.canvas.draw()
+                # self.line1.axes.set_ylim(ymin - 0.1 * yrange, ymax + 0.1 * yrange)
+                # self.line2.axes.set_ylim(ymin - 0.1 * yrange, ymax + 0.1 * yrange)
 
+                # Flush events to update the plot
+                # self.canvas.draw()
+                # self.ax.figure.canvas.flush_events()
         return self.line1, self.line2
 
     def on_closing(self):
