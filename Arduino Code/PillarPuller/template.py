@@ -12,6 +12,7 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 import re
+import concurrent.futures
 
 customtkinter.set_appearance_mode("Light")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -43,7 +44,7 @@ class serialBuffer():
                 self.forces.append(force)
                 self.platformDistances.append(platform_distance)
                 self.filtered_forces.append(filtered_force)
-                print(line)
+                # print(line)
 
     def get_data(self):
         return self.micros, self.forces, self.platformDistances, self.filtered_forces

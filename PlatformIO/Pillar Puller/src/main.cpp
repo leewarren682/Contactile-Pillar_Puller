@@ -4,7 +4,6 @@
 #include <Adafruit_NAU7802.h>
 #include <Arduino.h>
 #include <bounce2.h>
-// #define EN_PIN    7 //enable ENABLE IS GROUNDED ON THE PCB - ACTIVE LOW
 // CHANGE THESE PIN NUMBERS TO MATCH THE SCHEMATIC
 #define DIR_PIN 20   //direction
 #define STEP_PIN 21  //step
