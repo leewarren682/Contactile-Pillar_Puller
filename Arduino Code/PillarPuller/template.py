@@ -1,4 +1,5 @@
 import csv
+import os
 import time
 import serial
 import threading
@@ -72,11 +73,16 @@ class App(customtkinter.CTk):
         # Create sidebar
         self.sidebar_left = customtkinter.CTkFrame(self, width=200, corner_radius=0)
         self.sidebar_left.grid(row=0, column=0, rowspan=3, sticky="nsew")
+
+        # Construct the path to the logo.png file
+        current_dir = os.path.dirname(__file__)
+        logo_path = os.path.join(current_dir, 'assets', 'logo.png')
+
         # Logo in sidebar
         self.logo = customtkinter.CTkFrame(self, corner_radius=0)
         self.logo.columnconfigure((0,1), weight=1)
         self.logo.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="nw")
-        self.logo_src = customtkinter.CTkImage(light_image=Image.open("assets/logo.png"), size=(32, 32))
+        self.logo_src = customtkinter.CTkImage(light_image=Image.open(logo_path), size=(32, 32))
         self.logo_img = customtkinter.CTkLabel(self.logo, image=self.logo_src, text='', bg_color="transparent")
         self.logo_img.grid(row=0, column=0)
         self.logo_label = customtkinter.CTkLabel(self.logo, text="Template", font=customtkinter.CTkFont(size=24, weight="bold"))
@@ -272,7 +278,7 @@ class App(customtkinter.CTk):
                 self.platformDistances.append(platform_distance)
                 self.filtered_forces.append(filtered_force)
 
-                max_points = 50
+                max_points = 40 # Adjust this value to see how many points u want to plot on the graph / modulus value
                 length = max(min(len(self.micros), max_points), 1)
 
                 self.micros = self.micros[-length:]
@@ -286,7 +292,10 @@ class App(customtkinter.CTk):
 
                 if length <= max_points:
                     xs = list(range(0, length))
-                    self.ax.set_xlim(0, length - 1)
+                    if length > 1:
+                        self.ax.set_xlim(0, length - 1)
+                    else:
+                        self.ax.set_xlim(-0.5, 0.5)
                     self.line1.set_xdata(xs)
                     self.line2.set_xdata(xs)
                     self.line3.set_xdata(xs)
@@ -304,24 +313,25 @@ class App(customtkinter.CTk):
                             ymax = lmax
 
                 yrange = ymax - ymin
-                # Calculate new y-axis limits
-                new_ymin = ymin - 0.1 * yrange
-                new_ymax = ymax + 0.1 * yrange
-                current_ymin, current_ymax = self.ax.get_ylim()
-                if new_ymin != current_ymin or new_ymax != current_ymax:
-                    self.ax.set_ylim(new_ymin, new_ymax)
-                    
-                    self.ax.autoscale_view()
-                    self.ax.autoscale(enable=True, axis='y')
-                    self.ax.relim()
-                    # Flush events to update the plot
-                    self.canvas.draw()
-                # self.line1.axes.set_ylim(ymin - 0.1 * yrange, ymax + 0.1 * yrange)
-                # self.line2.axes.set_ylim(ymin - 0.1 * yrange, ymax + 0.1 * yrange)
+                self.ax.set_ylim(ymin - 0.1 * yrange, ymax + 0.1 * yrange)
+                # new_ymin = ymin - 0.1 * yrange
+                # new_ymax = ymax + 0.1 * yrange
 
-                # Flush events to update the plot
-                # self.canvas.draw()
-                # self.ax.figure.canvas.flush_events()
+                # Update y-axis limits
+                ## -- REDRAW CODE CAUSING THE SYSTEM TO SLOW DOWN DRAMATICALLY AND COMMANDS TO STUTTER -- ##
+                # new_ymin = ymin - 0.1 * yrange
+                # new_ymax = ymax + 0.1 * yrange
+                # current_ymin, current_ymax = self.ax.get_ylim()
+                # if new_ymin != current_ymin or new_ymax != current_ymax:
+                #     self.ax.set_ylim(new_ymin, new_ymax)
+                    
+                #     self.ax.autoscale_view()
+                #     self.ax.autoscale(enable=True, axis='y')
+                #     self.ax.relim()
+                #     # Flush events to update the plot
+                #     self.ax.figure.canvas.flush_events()
+                #     self.ax.figure.canvas.draw()
+                # self.ax.axes.relim()
         return self.line1, self.line2, self.line3
 
     def on_closing(self):
