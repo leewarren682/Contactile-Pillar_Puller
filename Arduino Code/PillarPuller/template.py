@@ -7,6 +7,7 @@ import tkinter.messagebox
 import customtkinter
 from PIL import Image, ImageTk
 import logging
+import time
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -116,7 +117,7 @@ class App(customtkinter.CTk):
         self.homing_button.grid(row=0, column=0, padx=20, pady=(675, 10), sticky="ew")
 
         # Add button to to open until a break is detected.
-        self.open_until_break_button = customtkinter.CTkButton(self, text="open until break", command= self.open_until_break)
+        self.open_until_break_button = customtkinter.CTkButton(self, text="break", command= self.open_until_break)
         self.open_until_break_button.grid(row=0, column=0, padx=20, pady=(525, 10), sticky="ew")
 
         # create central tabview
@@ -221,7 +222,7 @@ class App(customtkinter.CTk):
         self.buffer.send_command("home")
 
     def open_until_break(self):
-        self.buffer.send_command("open_until_break")
+        self.buffer.send_command("break")
 
     # Function to log the most recent data point from the buffer periodically
     def log_buffer_periodically(self):
@@ -271,7 +272,7 @@ class App(customtkinter.CTk):
                 self.platformDistances.append(platform_distance)
                 self.filtered_forces.append(filtered_force)
 
-                max_points = 100
+                max_points = 50
                 length = max(min(len(self.micros), max_points), 1)
 
                 self.micros = self.micros[-length:]
@@ -285,17 +286,14 @@ class App(customtkinter.CTk):
 
                 if length <= max_points:
                     xs = list(range(0, length))
-                    # if length > 1:
                     self.ax.set_xlim(0, length - 1)
-                    # else:
-                    # self.ax.set_xlim(-0.5, 0.5)
                     self.line1.set_xdata(xs)
                     self.line2.set_xdata(xs)
                     self.line3.set_xdata(xs)
 
                 ymin = float("inf")
                 ymax = float("-inf")
-                for line in [self.line1, self.line2]:
+                for line in [self.line1, self.line2, self.line3]:
                     a = line.get_alpha()
                     if a is None or a > 0:
                         lmin = np.min(line.get_ydata())
@@ -306,7 +304,6 @@ class App(customtkinter.CTk):
                             ymax = lmax
 
                 yrange = ymax - ymin
-                print(f"ymin: {ymin}, ymax: {ymax}, yrange: {yrange}")
                 # Calculate new y-axis limits
                 new_ymin = ymin - 0.1 * yrange
                 new_ymax = ymax + 0.1 * yrange

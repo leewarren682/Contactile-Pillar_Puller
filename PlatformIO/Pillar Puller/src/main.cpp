@@ -72,12 +72,6 @@ void readAndPrintData() {
   float filtered_mass = mass * a + (previous_filtered_mass * (1-a));
   previous_filtered_mass = filtered_mass;
 
-  SerialUSB1.print("Current Mass: ");
-  SerialUSB1.println(mass);
-  SerialUSB1.print("Filtered mass: ");
-  SerialUSB1.println(filtered_mass);
-
-
   // Print the values in serial format
   Serial.print(millis());
   Serial.print(",");
@@ -169,11 +163,11 @@ boolean break_detection() {
   float previous_mass = mass;
   SerialUSB1.print("Previous mass: ");
   SerialUSB1.println(previous_mass);
-  readAndPrintData();
+  // readAndPrintData();
   SerialUSB1.print("Current mass: ");
   SerialUSB1.println(mass);
   if (mass < (previous_mass * 0.8)) {
-    SerialUSB1.println("Force has decreased by 1.2x, stopping the motor.");
+    SerialUSB1.println("Force has decreased by 20%, stopping the motor.");
     stop();
     return true;
   } else {
@@ -182,13 +176,9 @@ boolean break_detection() {
 }
 
 // Function which opens the rig until a failure force is detected or the limit switch is hit.
+// Verify that break detection is functioning correctly.
 void open_until_break() {
-  while (break_detection() == false) {
-    // open();
-    // stepper.run();
-  }
-  SerialUSB1.println("BREAK HAS BEEN DETECTED, STOPPING.");
-  stop();
+  SerialUSB1.println(break_detection());
 }
 
 // Function to process the commands received from the serial port.
@@ -223,8 +213,10 @@ void processCommand(String command) {
       }
   } else if (command.startsWith("home")) {
       home();
-  } else if (command.startsWith("open_until_break")) {
-      open_until_break();
+  } else if (command.startsWith("break")) {
+      // while (Serial.available() == 0) {
+      //   open_until_break();
+      // }
   } else {
     Serial.println("Invalid command");
   }
@@ -311,7 +303,7 @@ void loop() {
   }
 
 
-  if ((ms - last_time) > 1000)  //run every 1s
+  if ((ms - last_time) > 100)  //run every 1s
   {
     last_time = ms;
 
@@ -323,6 +315,8 @@ void loop() {
     if (tmc.ola()) { Serial.println(F("Open Load A")); }
     if (tmc.olb()) { Serial.println(F("Open Load B")); }
   }
+
+  stepper.runSpeed();
 
   // Read and print the data
   readAndPrintData();
@@ -346,5 +340,4 @@ void loop() {
   } else {
     stop();
   }
-  stepper.runSpeed();
 }
