@@ -72,11 +72,6 @@ void readAndPrintData() {
   float filtered_mass = mass * a + (previous_filtered_mass * (1-a));
   previous_filtered_mass = filtered_mass;
 
-  SerialUSB1.print("Current Mass: ");
-  SerialUSB1.println(mass);
-  SerialUSB1.print("Filtered mass: ");
-  SerialUSB1.println(filtered_mass);
-
 
   // Print the values in serial format
   Serial.print(millis());
@@ -153,27 +148,18 @@ void home() {
     }
   }
 
-  SerialUSB1.println("Limit switch is pressed, stopping and breaking out of the loop.");
   stop();
-  SerialUSB1.println("Stopped. Setting the current position to 24.");
   stepper.setCurrentPosition(0);
-  SerialUSB1.println("Moving to position 0.");
   move_to_position(-22);
   stepper.setCurrentPosition(0);
-  SerialUSB1.println("Homing complete.");
 }
 
 // Function to detect if the rig has reached a failure force.
 // If the current force is lower than the previous force by 50%, stop the motor.
 boolean break_detection() {
   float previous_mass = mass;
-  SerialUSB1.print("Previous mass: ");
-  SerialUSB1.println(previous_mass);
   readAndPrintData();
-  SerialUSB1.print("Current mass: ");
-  SerialUSB1.println(mass);
   if (mass < (previous_mass * 0.8)) {
-    SerialUSB1.println("Force has decreased by 1.2x, stopping the motor.");
     stop();
     return true;
   } else {
@@ -184,8 +170,6 @@ boolean break_detection() {
 // Function which opens the rig until a failure force is detected or the limit switch is hit.
 void open_until_break() {
   while (break_detection() == false) {
-    // open();
-    // stepper.run();
   }
   SerialUSB1.println("BREAK HAS BEEN DETECTED, STOPPING.");
   stop();
@@ -229,8 +213,6 @@ void processCommand(String command) {
     Serial.println("Invalid command");
   }
 }
-
-
 
 void setup() {
   Serial.begin(115200);  //init serial port and set baudrate
@@ -330,14 +312,6 @@ void loop() {
   openButtonState = digitalRead(OPEN_BUTTON_PIN);
   closeButtonState = digitalRead(CLOSE_BUTTON_PIN);
   limitSwitchState = digitalRead(LIMIT_SWITCH_PIN);
-
-  // // Print the state of the limit switch
-  // SerialUSB1.print("Limit Switch is ");
-  // if (limitSwitchState == HIGH) {
-  //   SerialUSB1.println("HIGH");
-  // } else {
-  //   SerialUSB1.println("LOW");
-  // }
 
   if (openButtonState == LOW && closeButtonState == HIGH) {
     open();
