@@ -16,7 +16,7 @@ import numpy as np
 import re
 import concurrent.futures
 
-customtkinter.set_appearance_mode("Light")  # Modes: "System" (standard), "Dark", "Light"
+customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 class serialBuffer():
@@ -64,22 +64,27 @@ class App(customtkinter.CTk):
         # self.iconbitmap("assets/logo.ico")
 
         # configure grid layout (2x2)
-        self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=5)
-        self.rowconfigure(0, weight=7)
-        self.rowconfigure(1, weight=1)
-        self.rowconfigure(2, weight=0)
+        self.columnconfigure(0, weight=1) # Column for the sidebar
+        self.columnconfigure(1, weight=5) # Column for the tabview
+        self.rowconfigure(0, weight=7) # Row for the sidebar and tabview
+        self.rowconfigure(1, weight=1) # Row for the status window
+        self.rowconfigure(2, weight=0) # Row for the progress bar
 
         # Create sidebar
         self.sidebar_left = customtkinter.CTkFrame(self, width=200, corner_radius=0)
         self.sidebar_left.grid(row=0, column=0, rowspan=3, sticky="nsew")
+
+        # Configure grid layout for sidebar_left
+        self.sidebar_left.columnconfigure(0, weight=1)
+        for i in range(20):  # Assuming you have 11 buttons
+            self.sidebar_left.rowconfigure(i, weight=1)
 
         # Construct the path to the logo.png file
         current_dir = os.path.dirname(__file__)
         logo_path = os.path.join(current_dir, 'assets', 'logo.png')
 
         # Logo in sidebar
-        self.logo = customtkinter.CTkFrame(self, corner_radius=0)
+        self.logo = customtkinter.CTkFrame(self.sidebar_left, corner_radius=0)
         self.logo.columnconfigure((0,1), weight=1)
         self.logo.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="nw")
         self.logo_src = customtkinter.CTkImage(light_image=Image.open(logo_path), size=(32, 32))
@@ -89,42 +94,41 @@ class App(customtkinter.CTk):
         self.logo_label.grid(row=0, column=1, padx=(20,0), pady=(0,0))
 
         # Add entry box and button for CSV generation
-        self.filename_entry = customtkinter.CTkEntry(self, placeholder_text="Enter filename")
-        self.filename_entry.grid(row=0, column=0, padx=20, pady=(0, 5), sticky="ew")
-        self.generate_csv_button = customtkinter.CTkButton(self, text="Generate CSV", command=lambda: self.generate_csv(self.filename_entry.get()))
-        self.generate_csv_button.grid(row=0, column=0, padx=20, pady=(70, 10), sticky="ew")
+        self.filename_entry = customtkinter.CTkEntry(self.sidebar_left, placeholder_text="Enter filename")
+        self.filename_entry.grid(row=1, column=0, padx=20, pady=(1, 1), sticky="ew")
+        self.generate_csv_button = customtkinter.CTkButton(self.sidebar_left, text="Generate CSV", command=lambda: self.generate_csv(self.filename_entry.get()))
+        self.generate_csv_button.grid(row=2, column=0, padx=20, pady=(1, 1), sticky="ew")
 
         # Add entry box and button for target_position
-        self.position_entry = customtkinter.CTkEntry(self, placeholder_text="Enter a position (mm)")
-        self.position_entry.grid(row=0, column=0, padx=20, pady=(150, 5), sticky="ew")
-        self.generate_position_button = customtkinter.CTkButton(self, text="Move to Distance", command=lambda: self.move_to_position(self.position_entry.get()))
-        self.generate_position_button.grid(row=0, column=0, padx=20, pady=(220, 10), sticky="ew")
-
-        # Add entry box and button for target_force
-        self.force_entry = customtkinter.CTkEntry(self, placeholder_text="Enter a Force (N)")
-        self.force_entry.grid(row=0, column=0, padx=20, pady=(300, 5), sticky="ew")
-        self.generate_force_button = customtkinter.CTkButton(self, text="Move to Force", command=lambda: self.move_to_force(self.force_entry.get()))
-        self.generate_force_button.grid(row=0, column=0, padx=20, pady=(370, 10), sticky="ew")
+        self.position_entry = customtkinter.CTkEntry(self.sidebar_left, placeholder_text="Enter a position (mm)")
+        self.position_entry.grid(row=3, column=0, padx=20, pady=(1, 1), sticky="ew")
+        self.generate_position_button = customtkinter.CTkButton(self.sidebar_left, text="Move to Distance", command=lambda: self.move_to_position(self.position_entry.get()))
+        self.generate_position_button.grid(row=4, column=0, padx=20, pady=(1, 1), sticky="ew")
 
         # Add button to open
-        self.open_button = customtkinter.CTkButton(self, text="open", command=self.open_rig)
-        self.open_button.grid(row=0, column=0, padx=20, pady=(450, 10), sticky="ew")
+        self.open_button = customtkinter.CTkButton(self.sidebar_left, text="open", command=self.open_rig)
+        self.open_button.grid(row=7, column=0, padx=20, pady=(1, 1), sticky="ew")
 
         # Add button to close
-        self.open_button = customtkinter.CTkButton(self, text="close", command=self.close)
-        self.open_button.grid(row=0, column=0, padx=20, pady=(600, 10), sticky="ew")
+        self.close_button = customtkinter.CTkButton(self.sidebar_left, text="close", command=self.close)
+        self.close_button.grid(row=8, column=0, padx=20, pady=(1, 1), sticky="ew")
 
         # Add button to stop
-        self.open_button = customtkinter.CTkButton(self, text="stop", command=self.stop)
-        self.open_button.grid(row=0, column=0, padx=20, pady=(750, 10), sticky="ew")
+        self.stop_button = customtkinter.CTkButton(self.sidebar_left, text="stop", command=self.stop)
+        self.stop_button.grid(row=9, column=0, padx=20, pady=(1, 1), sticky="ew")
 
         # Add button to home
-        self.homing_button = customtkinter.CTkButton(self, text="home", command=self.home)
-        self.homing_button.grid(row=0, column=0, padx=20, pady=(675, 10), sticky="ew")
+        self.homing_button = customtkinter.CTkButton(self.sidebar_left, text="home", command=self.home)
+        self.homing_button.grid(row=10, column=0, padx=20, pady=(1, 1), sticky="ew")
 
-        # Add button to to open until a break is detected.
-        self.open_until_break_button = customtkinter.CTkButton(self, text="break", command= self.open_until_break)
-        self.open_until_break_button.grid(row=0, column=0, padx=20, pady=(525, 10), sticky="ew")
+        # Add button to open until a break is detected
+        self.open_until_break_button = customtkinter.CTkButton(self.sidebar_left, text="break", command=self.open_until_break)
+        self.open_until_break_button.grid(row=11, column=0, padx=20, pady=(1, 1), sticky="ew")
+
+        # Add a button to zero's the position value to 0.
+        self.zero_position_button = customtkinter.CTkButton(self.sidebar_left, text="zero position", command=self.zero_position)
+        self.zero_position_button.grid(row=12, column=0, padx=20, pady=(1, 1), sticky="ew")
+
 
         # create central tabview
         self.tabview = customtkinter.CTkTabview(self)
@@ -190,7 +194,6 @@ class App(customtkinter.CTk):
 
     # Function to generate a CSV file from the buffer
     def generate_csv(self, filename_entry):
-        micros, forces, platformDistances = self.buffer.get_data()
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         if filename_entry:
             filename = f'{filename_entry}.csv'
@@ -218,10 +221,6 @@ class App(customtkinter.CTk):
     # Function which tells the Teensy to move to a specific position.
     def move_to_position(self, position):
         self.buffer.send_command(f"move_to_position{position}")
-
-    # Function which tells the Teensy to move to a specific force.
-    def move_to_force(self, force):
-        self.buffer.send_command(f"move_to_force{force}")
     
     # Function which tells the Teensy to home.
     def home(self):
@@ -229,6 +228,9 @@ class App(customtkinter.CTk):
 
     def open_until_break(self):
         self.buffer.send_command("break")
+
+    def zero_position(self):
+        self.buffer.send_command("zero_position")
 
     # Function to log the most recent data point from the buffer periodically
     def log_buffer_periodically(self):
@@ -314,24 +316,6 @@ class App(customtkinter.CTk):
 
                 yrange = ymax - ymin
                 self.ax.set_ylim(ymin - 0.1 * yrange, ymax + 0.1 * yrange)
-                # new_ymin = ymin - 0.1 * yrange
-                # new_ymax = ymax + 0.1 * yrange
-
-                # Update y-axis limits
-                ## -- REDRAW CODE CAUSING THE SYSTEM TO SLOW DOWN DRAMATICALLY AND COMMANDS TO STUTTER -- ##
-                # new_ymin = ymin - 0.1 * yrange
-                # new_ymax = ymax + 0.1 * yrange
-                # current_ymin, current_ymax = self.ax.get_ylim()
-                # if new_ymin != current_ymin or new_ymax != current_ymax:
-                #     self.ax.set_ylim(new_ymin, new_ymax)
-                    
-                #     self.ax.autoscale_view()
-                #     self.ax.autoscale(enable=True, axis='y')
-                #     self.ax.relim()
-                #     # Flush events to update the plot
-                #     self.ax.figure.canvas.flush_events()
-                #     self.ax.figure.canvas.draw()
-                # self.ax.axes.relim()
         return self.line1, self.line2, self.line3
 
     def on_closing(self):

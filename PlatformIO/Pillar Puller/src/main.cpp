@@ -82,6 +82,9 @@ void readAndPrintData() {
   Serial.println(filtered_mass);
 }
 
+
+
+
 // Function to stop the motor. Sets idle current to 400mA.
 void stop() {
   stepper.setSpeed(0);
@@ -116,14 +119,9 @@ void move_to_position(int desired_position) {
   stop();
 }
 
-// Function to open the rige to a specific force provided in Newtons.
-void move_to_force(int desired_force) {
-  while (mass < desired_force) {
-    open();
-    stepper.run();
-    readAndPrintData();
-  }
-  stop(); // Stop the motor after the desired force is reached.
+void on_limit_switch_hit() {
+  stop();
+  move_to_position(0);
 }
 
 void readLimitSwitch() {
@@ -134,6 +132,8 @@ void readLimitSwitch() {
 
 // Function to use a homing switch to find the zero position.
 void home() {
+  float openswitchdist = 0;
+  float closeswitchdist = 0;
   limitSwitchState = digitalRead(LIMIT_SWITCH_PIN);
   while (limitSwitchState == HIGH) {
     stepper.setSpeed(speed);
@@ -143,6 +143,9 @@ void home() {
     readAndPrintData();
   
     if (limitSwitchState == LOW) {
+      openswitchdist = stepper.currentPosition();
+      SerialUSB1.print("Switch 1 distance: ");
+      SerialUSB1.println(openswitchdist);
       break;
     }
   }
@@ -187,12 +190,20 @@ void processCommand(String command) {
   if (command.startsWith("open")) { // Find a command to remove whitespace
     // Run the open command until another command is received.
     while (Serial.available() == 0) {
+      if (limitSwitchState == LOW) {
+        on_limit_switch_hit();
+        break;
+      }
       open();
       stepper.run();
       readAndPrintData();
     }
   } else if (command.startsWith("close")) {
     while (Serial.available() == 0) {
+      if (limitSwitchState == LOW) {
+        on_limit_switch_hit();
+        break;
+      }
       close();
       stepper.run();
       readAndPrintData();
@@ -202,26 +213,26 @@ void processCommand(String command) {
   } else if (command.indexOf("move_to_position") != -1) {
     int desired_position = command.substring(strlen("move_to_position")).toInt();
     while (Serial.available() == 0) {
+      if (limitSwitchState == LOW) {
+        on_limit_switch_hit();
+        break;
+      }
       move_to_position(desired_position);
       readAndPrintData();
     }
-  } else if (command.indexOf("move_to_force") != -1) {
-      int desired_force = command.substring(strlen("move_to_force")).toInt();
-      while (Serial.available() == 0) {
-        move_to_force(desired_force);
-        readAndPrintData();
-      }
   } else if (command.startsWith("home")) {
       home();
   } else if (command.startsWith("break")) {
       // while (Serial.available() == 0) {
       //   open_until_break();
       // }
+  } else if (command.startsWith("zero_position")) {
+    SerialUSB1.println("Setting the current position to 0.");
+    stepper.setCurrentPosition(0);
   } else {
     Serial.println("Invalid command");
   }
 }
-
 
 
 void setup() {
@@ -325,13 +336,14 @@ void loop() {
   closeButtonState = digitalRead(CLOSE_BUTTON_PIN);
   limitSwitchState = digitalRead(LIMIT_SWITCH_PIN);
 
-  // // Print the state of the limit switch
-  // SerialUSB1.print("Limit Switch is ");
-  // if (limitSwitchState == HIGH) {
-  //   SerialUSB1.println("HIGH");
-  // } else {
-  //   SerialUSB1.println("LOW");
-  // }
+  // Print the state of the limit switch
+  SerialUSB1.print("Limit Switch is ");
+  if (limitSwitchState == LOW) {
+    on_limit_switch_hit();
+    // SerialUSB1.println("LOW");
+  } else {
+    SerialUSB1.println("HIGH");
+  }
 
   if (openButtonState == LOW && closeButtonState == HIGH) {
     open();
