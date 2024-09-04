@@ -13,6 +13,9 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
+from bokeh.plotting import figure, output_file, save
+from bokeh.layouts import column
+from bokeh.io import show
 
 customtkinter.set_appearance_mode("Dark")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
@@ -62,6 +65,16 @@ class App(customtkinter.CTk):
     def __init__(self, buffer):
         super().__init__()
 
+        # Create a lock for thread safety
+        self.lock = threading.Lock()
+
+        # Create and start threads for updating the lines
+        self.platform_distances_thread = threading.Thread(target=self.update_platform_distances)
+        self.forces_thread = threading.Thread(target=self.update_forces)
+
+        self.platform_distances_thread.start()
+        self.forces_thread.start()
+
         # configure window
         self.title("Contactile")
         self.center_geometry(1920, 1080)
@@ -80,7 +93,7 @@ class App(customtkinter.CTk):
 
         # Configure grid layout for sidebar_left
         self.sidebar_left.columnconfigure(0, weight=1)
-        for i in range(20):  # Assuming you have 20 buttons
+        for i in range(20):  # Assuming you have 11 buttons
             self.sidebar_left.rowconfigure(i, weight=1)
 
         # Construct the path to the logo.png file
@@ -179,6 +192,28 @@ class App(customtkinter.CTk):
 
         # Set up the graph
         self.setup_graph()
+
+    def update_platform_distances(self):
+        while True:
+            with self.lock:
+                micros, forces, platformDistances, filtered_forces = self.buffer.get_data()
+                if len(micros) > 0 and len(platformDistances) > 0:
+                    self.line1.set_ydata(platformDistances)
+                    self.line1.set_xdata(list(range(len(platformDistances))))
+                    self.ax.figure.canvas.draw()
+
+            time.sleep(0.05)  # Adjust the sleep time as needed
+
+    def update_forces(self):
+        while True:
+            with self.lock:
+                micros, forces, platformDistances, filtered_forces = self.buffer.get_data()
+                if len(micros) > 0 and len(forces) > 0:
+                    self.line2.set_ydata(forces)
+                    self.line2.set_xdata(list(range(len(forces))))
+                    self.ax.figure.canvas.draw()
+
+            time.sleep(0.05)  # Adjust the sleep time as needed
 
     def center_geometry(self, width, height):
         ''' Set the window size and center on screen '''
@@ -280,7 +315,7 @@ class App(customtkinter.CTk):
         self.counter = 0
 
 
-        self.ani = FuncAnimation(self.fig, self.animate, interval=10, blit=True)
+        self.ani = FuncAnimation(self.fig, self.animate, interval=2, blit=True)
 
     # Function to animate the graph
     def animate(self, frame):
@@ -342,14 +377,37 @@ class App(customtkinter.CTk):
 
                 if new_ymin != current_ymin or new_ymax != current_ymax:
                     self.ax.set_ylim(new_ymin, new_ymax)
-                    # Uncomment for redraw.
-                    # self.ax.figure.canvas.draw() 
+                    self.ax.figure.canvas.draw()
 
 
         return self.line1, self.line2, self.line3
 
     def on_closing(self):
         self.buffer.ser.close()  # Close the serial port
+
+
+
+def plot_with_bokeh(micros, forces, platformDistances, filtered_forces):
+    # Output to an HTML file
+    output_file("plot.html")
+
+    # Create a new plot with a title and axis labels
+    p1 = figure(title="Forces Over Time", x_axis_label='Time (micros)', y_axis_label='Forces')
+    p2 = figure(title="Platform Distances Over Time", x_axis_label='Time (micros)', y_axis_label='Platform Distances')
+    p3 = figure(title="Filtered Forces Over Time", x_axis_label='Time (micros)', y_axis_label='Filtered Forces')
+
+    # Add a line renderer with legend and line thickness
+    p1.line(micros, forces, legend_label="Forces", line_width=2)
+    p2.line(micros, platformDistances, legend_label="Platform Distances", line_width=2)
+    p3.line(micros, filtered_forces, legend_label="Filtered Forces", line_width=2)
+
+    # Arrange plots in a column
+    layout = column(p1, p2, p3)
+
+    # Save and show the results
+    save(layout)
+    show(layout)
+
 
 ### WARNING: This is not thread safe. Look at https://github.com/beenje/tkinter-logging-text-widget for a thread-safe logger
 class TextHandler(logging.Handler):
@@ -383,10 +441,17 @@ if __name__ == "__main__":
     buffer = serialBuffer()
 
 
+
     # Populate the buffer in a separate thread
     populate_thread = threading.Thread(target=buffer.populate)  # Create a thread to populate the buffer
     populate_thread.daemon = True
     populate_thread.start()
+    
+    # Get data from the buffer
+    micros, forces, platformDistances, filtered_forces = buffer.get_data()
+
+    # Plot data using Bokeh
+    plot_with_bokeh(micros, forces, platformDistances, filtered_forces)
 
     app = App(buffer)
     app.mainloop()

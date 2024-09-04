@@ -58,6 +58,7 @@ class serialBuffer():
     def send_command(self, command):
         self.ser.write((command + '\n').encode('utf-8'))
 
+
 class App(customtkinter.CTk):
     def __init__(self, buffer):
         super().__init__()
@@ -80,7 +81,7 @@ class App(customtkinter.CTk):
 
         # Configure grid layout for sidebar_left
         self.sidebar_left.columnconfigure(0, weight=1)
-        for i in range(20):  # Assuming you have 20 buttons
+        for i in range(20):  # Assuming you have 11 buttons
             self.sidebar_left.rowconfigure(i, weight=1)
 
         # Construct the path to the logo.png file
@@ -96,43 +97,6 @@ class App(customtkinter.CTk):
         self.logo_img.grid(row=0, column=0)
         self.logo_label = customtkinter.CTkLabel(self.logo, text="Template", font=customtkinter.CTkFont(size=24, weight="bold"))
         self.logo_label.grid(row=0, column=1, padx=(20,0), pady=(0,0))
-
-        # Add entry box and button for CSV generation
-        self.filename_entry = customtkinter.CTkEntry(self.sidebar_left, placeholder_text="Enter filename")
-        self.filename_entry.grid(row=1, column=0, padx=20, pady=(1, 1), sticky="ew")
-        self.generate_csv_button = customtkinter.CTkButton(self.sidebar_left, text="Generate CSV", command=lambda: self.generate_csv(self.filename_entry.get()))
-        self.generate_csv_button.grid(row=2, column=0, padx=20, pady=(1, 1), sticky="ew")
-
-        # Add entry box and button for target_position
-        self.position_entry = customtkinter.CTkEntry(self.sidebar_left, placeholder_text="Enter a position (mm)")
-        self.position_entry.grid(row=3, column=0, padx=20, pady=(1, 1), sticky="ew")
-        self.generate_position_button = customtkinter.CTkButton(self.sidebar_left, text="Move to Distance", command=lambda: self.move_to_position(self.position_entry.get()))
-        self.generate_position_button.grid(row=4, column=0, padx=20, pady=(1, 1), sticky="ew")
-
-        # Add button to open
-        self.open_button = customtkinter.CTkButton(self.sidebar_left, text="open", command=self.open_rig)
-        self.open_button.grid(row=7, column=0, padx=20, pady=(1, 1), sticky="ew")
-
-        # Add button to close
-        self.close_button = customtkinter.CTkButton(self.sidebar_left, text="close", command=self.close)
-        self.close_button.grid(row=8, column=0, padx=20, pady=(1, 1), sticky="ew")
-
-        # Add button to stop
-        self.stop_button = customtkinter.CTkButton(self.sidebar_left, text="stop", command=self.stop)
-        self.stop_button.grid(row=9, column=0, padx=20, pady=(1, 1), sticky="ew")
-
-        # Add button to home
-        self.homing_button = customtkinter.CTkButton(self.sidebar_left, text="home", command=self.home)
-        self.homing_button.grid(row=10, column=0, padx=20, pady=(1, 1), sticky="ew")
-
-        # Add button to open until a break is detected
-        self.open_until_break_button = customtkinter.CTkButton(self.sidebar_left, text="break", command=self.open_until_break)
-        self.open_until_break_button.grid(row=11, column=0, padx=20, pady=(1, 1), sticky="ew")
-
-        # Add a button to zero's the position value to 0.
-        self.zero_position_button = customtkinter.CTkButton(self.sidebar_left, text="zero position", command=self.zero_position)
-        self.zero_position_button.grid(row=12, column=0, padx=20, pady=(1, 1), sticky="ew")
-
 
         # create central tabview
         self.tabview = customtkinter.CTkTabview(self)
@@ -174,12 +138,6 @@ class App(customtkinter.CTk):
 
         self.logger.warning('Progress bar started running as indeterminate')
 
-        # Schedule the periodic buffer logging
-        # self.log_buffer_periodically()
-
-        # Set up the graph
-        self.setup_graph()
-
     def center_geometry(self, width, height):
         ''' Set the window size and center on screen '''
         self.update_idletasks()
@@ -196,70 +154,10 @@ class App(customtkinter.CTk):
 
         self.geometry(f"{width}x{height}+{int(x)}+{int(y)}")
 
-    # Function to generate a CSV file from the buffer
-    def generate_csv(self, filename_entry):
-        timestamp = time.strftime("%Y%m%d-%H%M%S")
-        if filename_entry:
-            filename = f'{filename_entry}.csv'
-        else:
-            filename = f'pillar_puller_{timestamp}.csv'
-    
-        with open(filename, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['Time', 'Forces', 'Platform Position'])
-            for i in range(len(self.buffer.micros)):
-                writer.writerow([self.buffer.micros[i], self.buffer.forces[i], self.buffer.platformDistances[i]])
-        
-        # Create Plot
-        plt.figure(figsize=(10, 6))
-        plt.plot(self.buffer.micros, self.buffer.forces, label='Forces')
-        plt.plot(self.buffer.micros, self.buffer.platformDistances, label='Platform Position')
-        plt.xlabel('Time')
-        plt.ylabel('Values')
-        plt.title('Forces and Platform Position Over Time')
-        plt.legend()
-        plt.grid(True)
+    def on_closing(self):
+        self.buffer.ser.close()  # Close the serial port
 
-        # Save Plot as Image
-        plot_filename = filename.replace('.csv', '.png')
-        plt.savefig(plot_filename)
-        plt.close()
-        
-    # Function which tells the Teensy to stop the motor.
-    def stop(self):
-        self.buffer.send_command("stop")
-    
-    # Funcion which tells the Teensy to open.
-    def open_rig(self):
-        self.buffer.send_command("open")
-    
-    # Function which tells the Teensy to close.
-    def close(self):
-        self.buffer.send_command("close")
-
-    # Function which tells the Teensy to move to a specific position.
-    def move_to_position(self, position):
-        self.buffer.send_command(f"move_to_position{position}")
-    
-    # Function which tells the Teensy to home.
-    def home(self):
-        self.buffer.send_command("home")
-
-    def open_until_break(self):
-        self.buffer.send_command("break")
-
-    def zero_position(self):
-        self.buffer.send_command("zero_position")
-
-    # Function to log the most recent data point from the buffer periodically
-    def log_buffer_periodically(self):
-        ''' Log the most recent data point from the buffer periodically '''
-        micros, forces, platformDistances, filtered_forces = self.buffer.get_data()
-        if micros and forces and platformDistances:  # Check if there is data in the buffer
-            self.logger.info(f"Time: {micros[-1]}, Forces: {forces[-1]}, Platform Position: {platformDistances[-1]}, Filtered Forces: {filtered_forces[-1]}")
-        self.after(5000, self.log_buffer_periodically)  # Schedule this method to run again after 5000 ms (5 second)
-
- # Function to set up the graph
+    # Function to set up the graph
     def setup_graph(self):
         self.fig, self.ax = plt.subplots()
         self.ax.set_aspect('auto')
@@ -273,83 +171,29 @@ class App(customtkinter.CTk):
         self.canvas.get_tk_widget().grid(row=0, column=0, sticky="nsew")
 
 
+
+
+    def plot_graph(self, data, N0, N1):
         self.micros = []
         self.forces = []
         self.platformDistances = []
         self.filtered_forces = []
         self.counter = 0
+        
+        for frame in range (N0, N1): # Animation frame
+            
 
-
-        self.ani = FuncAnimation(self.fig, self.animate, interval=10, blit=True)
-
-    # Function to animate the graph
-    def animate(self, frame):
         micros, forces, platformDistances, filtered_forces = self.buffer.get_data()
-
-        if len(micros) > 0 and len(forces) > 0 and len(platformDistances) > 0:
-            current_time = micros[-1]
-            force = forces[-1]
-            platform_distance = platformDistances[-1]
-            filtered_force = filtered_forces[-1]
-
-            self.counter += 1
-
-            if self.counter % 2 == 0:
-                self.micros.append(current_time)
-                self.forces.append(force)
-                self.platformDistances.append(platform_distance)
-                self.filtered_forces.append(filtered_force)
-
-                max_points = 40 # Adjust this value to see how many points u want to plot on the graph / modulus value
-                length = max(min(len(self.micros), max_points), 1)
-
-                self.micros = self.micros[-length:]
-                self.forces = self.forces[-length:]
-                self.platformDistances = self.platformDistances[-length:]
-                self.filtered_forces = self.filtered_forces[-length:]
-
-                self.line1.set_ydata(self.platformDistances)
-                self.line2.set_ydata(self.forces)
-                self.line3.set_ydata(self.filtered_forces)
-
-                if length <= max_points:
-                    xs = list(range(0, length))
-                    if length > 1:
-                        self.ax.set_xlim(0, length - 1)
-                    else:
-                        self.ax.set_xlim(-0.5, 0.5)
-                    self.line1.set_xdata(xs)
-                    self.line2.set_xdata(xs)
-                    self.line3.set_xdata(xs)
-
-                ymin = float("inf")
-                ymax = float("-inf")
-                for line in [self.line1, self.line2, self.line3]:
-                    a = line.get_alpha()
-                    if a is None or a > 0:
-                        lmin = np.min(line.get_ydata())
-                        lmax = np.max(line.get_ydata())
-                        if lmin < ymin:
-                            ymin = lmin
-                        if lmax > ymax:
-                            ymax = lmax
-
-                # With Redraw
-                yrange = ymax - ymin
-                new_ymin = ymin - 0.1 * yrange
-                new_ymax = ymax + 0.1 * yrange
-                current_ymin, current_ymax = self.ax.get_ylim()
-
-                if new_ymin != current_ymin or new_ymax != current_ymax:
-                    self.ax.set_ylim(new_ymin, new_ymax)
-                    # Uncomment for redraw.
-                    # self.ax.figure.canvas.draw() 
-
-
-        return self.line1, self.line2, self.line3
-
-    def on_closing(self):
-        self.buffer.ser.close()  # Close the serial port
+        
+        # Use multiprocessing to plot the graph
+        self.ax.clear()
+        self.ax.plot(micros[N0:N1], forces[N0:N1], label='Forces')
+        self.ax.plot(micros[N0:N1], platformDistances[N0:N1], label='Platform Distances')
+        self.ax.plot(micros[N0:N1], filtered_forces[N0:N1], label='Filtered Forces')
+        self.ax.legend(loc='upper left')
+        self.ax.set_title('Pillar Puller Data')
+        self.canvas.draw()
+        
 
 ### WARNING: This is not thread safe. Look at https://github.com/beenje/tkinter-logging-text-widget for a thread-safe logger
 class TextHandler(logging.Handler):

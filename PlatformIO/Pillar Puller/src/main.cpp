@@ -67,7 +67,7 @@ void readAndPrintData() {
   int32_t val = nau.read();
   float mass = (val - 3000.0) / 600.0;
   float platformTravel = (float(stepper.currentPosition()) / 3200.00) * 2.00;
-  float a = 0.35;
+  float a = 0.02;
   static float previous_filtered_mass = mass;
   float filtered_mass = mass * a + (previous_filtered_mass * (1-a));
   previous_filtered_mass = filtered_mass;
@@ -181,7 +181,20 @@ boolean break_detection() {
 // Function which opens the rig until a failure force is detected or the limit switch is hit.
 // Verify that break detection is functioning correctly.
 void open_until_break() {
-  SerialUSB1.println(break_detection());
+  // Open until the limit switch is hit.
+  while (limitSwitchState == HIGH) {
+    open();
+    stepper.run();
+    readAndPrintData();
+    limitSwitchState = digitalRead(LIMIT_SWITCH_PIN);
+    if (limitSwitchState == LOW) {
+      on_limit_switch_hit();
+      break;
+    }
+    if (break_detection()) {
+      break;
+    }
+  }
 }
 
 // Function to process the commands received from the serial port.
@@ -223,9 +236,10 @@ void processCommand(String command) {
   } else if (command.startsWith("home")) {
       home();
   } else if (command.startsWith("break")) {
-      // while (Serial.available() == 0) {
-      //   open_until_break();
-      // }
+      while (Serial.available() == 0 && limitSwitchState == HIGH) {
+        open_until_break();
+        readAndPrintData();
+      }
   } else if (command.startsWith("zero_position")) {
     SerialUSB1.println("Setting the current position to 0.");
     stepper.setCurrentPosition(0);
@@ -337,13 +351,13 @@ void loop() {
   limitSwitchState = digitalRead(LIMIT_SWITCH_PIN);
 
   // Print the state of the limit switch
-  SerialUSB1.print("Limit Switch is ");
-  if (limitSwitchState == LOW) {
-    on_limit_switch_hit();
-    // SerialUSB1.println("LOW");
-  } else {
-    SerialUSB1.println("HIGH");
-  }
+  // SerialUSB1.print("Limit Switch is ");
+  // if (limitSwitchState == LOW) {
+  //   on_limit_switch_hit();
+  //   // SerialUSB1.println("LOW");
+  // } else {
+  //   SerialUSB1.println("HIGH");
+  // }
 
   if (openButtonState == LOW && closeButtonState == HIGH) {
     open();
