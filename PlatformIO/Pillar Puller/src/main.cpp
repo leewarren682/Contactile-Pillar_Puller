@@ -327,6 +327,10 @@ void loop() {
     processCommand(command);
   }
 
+  if (limitSwitchState == LOW) {
+    on_limit_switch_hit();
+  }
+
 
   if ((ms - last_time) > 100)  //run every 1s
   {

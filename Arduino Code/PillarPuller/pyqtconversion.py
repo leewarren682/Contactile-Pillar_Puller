@@ -127,9 +127,6 @@ class MyWindow(QMainWindow):
         layout.addWidget(self.stopButton)
         self.stopButton.clicked.connect(lambda: self.buffer.send_command("stop"))
         
-        # Home Button
-        self.homeButton = QtWidgets.QPushButton("Home", self)
-        layout.addWidget(self.homeButton)
         
         # Break button
         self.breakButton = QtWidgets.QPushButton("Break", self)
