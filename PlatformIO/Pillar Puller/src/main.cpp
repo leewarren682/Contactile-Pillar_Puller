@@ -8,14 +8,13 @@
 #define DIR_PIN 20   //direction
 #define STEP_PIN 21  //step
 
-
 #define OPEN_BUTTON_PIN 15   // TEENSY PIN 16
 #define CLOSE_BUTTON_PIN 16  // TEENSY PIN 15f
-#define LIMIT_SWITCH_PIN 17  // TEENSY PIN 17
+#define LIMIT_SWITCH_PIN 17  // TEENSY PIN  7
 int openButtonState = 0;
 int closeButtonState = 0;
 int limitSwitchState = 0;
-int speed = 1500;
+int speed = 2000;
 
 // Variables for debouncing
 unsigned long lastDebounceTime = 0;
@@ -94,13 +93,11 @@ void stop() {
 
 // Function to open the rig. Sets speed to constant.
 void open() {
-  tmc.rms_current(1000);  //1000mA RMS
   stepper.setSpeed(speed);
 }
 
 // Function to close the rig. Sets speed to constant.
 void close() {
-  tmc.rms_current(1000);  //1000mA RMS
   stepper.setSpeed(-speed);
 }
 
@@ -203,7 +200,7 @@ void processCommand(String command) {
   if (command.startsWith("open")) { // Find a command to remove whitespace
     // Run the open command until another command is received.
     while (Serial.available() == 0) {
-      if (limitSwitchState == LOW) {
+      if (limitSwitchState == HIGH) {
         on_limit_switch_hit();
         break;
       }
@@ -213,7 +210,7 @@ void processCommand(String command) {
     }
   } else if (command.startsWith("close")) {
     while (Serial.available() == 0) {
-      if (limitSwitchState == LOW) {
+      if (limitSwitchState == HIGH) {
         on_limit_switch_hit();
         break;
       }
@@ -226,7 +223,7 @@ void processCommand(String command) {
   } else if (command.indexOf("move_to_position") != -1) {
     int desired_position = command.substring(strlen("move_to_position")).toInt();
     while (Serial.available() == 0) {
-      if (limitSwitchState == LOW) {
+      if (limitSwitchState == HIGH) {
         on_limit_switch_hit();
         break;
       }
@@ -284,7 +281,7 @@ void setup() {
   tmc.toff(4);         //off time
   tmc.blank_time(24);  //blank time
   tmc.microsteps(16);     //16 microstep
-  tmc.rms_current(400);  //Initial RMS of 400mA
+  tmc.rms_current(800);  //Initial RMS of 800mA
 
   // Stepper settings
   stepper.setMaxSpeed(10000);
@@ -327,7 +324,7 @@ void loop() {
     processCommand(command);
   }
 
-  if (limitSwitchState == LOW) {
+  if (limitSwitchState == HIGH) {
     on_limit_switch_hit();
   }
 
@@ -357,14 +354,15 @@ void loop() {
   // Print the state of the limit switch
   // SerialUSB1.print("Limit Switch is ");
   // if (limitSwitchState == LOW) {
-  //   on_limit_switch_hit();
-  //   // SerialUSB1.println("LOW");
+  //   // on_limit_switch_hit();
+  //   SerialUSB1.println("LOW");
   // } else {
   //   SerialUSB1.println("HIGH");
   // }
 
   if (openButtonState == LOW && closeButtonState == HIGH) {
     open();
+    Serial.println("Opening");
   } else if (closeButtonState == LOW && openButtonState == HIGH) {
     close();
   } else {
